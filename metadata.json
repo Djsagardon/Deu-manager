@@ -1,0 +1,6 @@
+{
+  "name": "Due Manager SaaS Platform",
+  "description": "Enterprise multi-tenant customer ledger, loan manager, subscription billing, UPI QR generator, WhatsApp reminders, and payment tracking SaaS platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

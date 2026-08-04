@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the tenant ID (either 'tenant_' + UID or raw UID)
+    function isOwner(tenantId) {
+      return isSignedIn() && (
+        tenantId == 'tenant_' + request.auth.uid ||
+        tenantId == request.auth.uid
+      );
+    }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Company Tenant Workspaces
+    match /tenants/{tenantId} {
+      allow read, write: if isOwner(tenantId);
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Store Settings
+    match /settings/{tenantId} {
+      allow read, write: if isOwner(tenantId);
+    }
+
+    // Customers Collection
+    match /customers/{customerId} {
+      allow read: if isSignedIn() && (resource == null || isOwner(resource.data.tenantId));
+      allow create: if isOwner(request.resource.data.tenantId);
+      allow update, delete: if isSignedIn() && isOwner(resource.data.tenantId);
+    }
+
+    // Transactions / Ledger / Loans Collection
+    match /transactions/{txnId} {
+      allow read: if isSignedIn() && (resource == null || isOwner(resource.data.tenantId));
+      allow create: if isOwner(request.resource.data.tenantId);
+      allow update, delete: if isSignedIn() && isOwner(resource.data.tenantId);
+    }
+
+    // Payment Claims Collection
+    match /claims/{claimId} {
+      allow read: if isSignedIn() && (resource == null || isOwner(resource.data.tenantId));
+      allow create: if isOwner(request.resource.data.tenantId);
+      allow update, delete: if isSignedIn() && isOwner(resource.data.tenantId);
+    }
+
+    // Invoices Collection
+    match /invoices/{invoiceId} {
+      allow read: if isSignedIn() && (resource == null || isOwner(resource.data.tenantId));
+      allow create: if isOwner(request.resource.data.tenantId);
+      allow update: if isSignedIn() && isOwner(resource.data.tenantId);
+    }
+
+    // Subscription Plans (Read-only for authenticated users)
+    match /plans/{planId} {
+      allow read: if isSignedIn();
+    }
+
+    // System Announcements (Read-only for authenticated users)
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+    }
+
+    // Support Tickets
+    match /support_tickets/{ticketId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && isOwner(resource.data.tenantId);
+    }
+
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (resource == null || isOwner(resource.data.tenantId));
+      allow create: if isOwner(request.resource.data.tenantId);
+      allow update, delete: if isSignedIn() && isOwner(resource.data.tenantId);
+    }
+  }
+}
+

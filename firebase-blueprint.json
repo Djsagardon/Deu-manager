@@ -1,0 +1,216 @@
+{
+  "entities": {
+    "tenants": {
+      "title": "Tenants",
+      "description": "Company / Store multi-tenant workspace profile and subscription state",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "ownerEmail": { "type": "string" },
+        "phone": { "type": "string" },
+        "planId": { "type": "string" },
+        "planName": { "type": "string" },
+        "status": { "type": "string" },
+        "customerLimit": { "type": "number" },
+        "loanLimit": { "type": "number" },
+        "validUntil": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "address": { "type": "string" },
+        "businessType": { "type": "string" },
+        "upiId": { "type": "string" },
+        "currency": { "type": "string" },
+        "timeZone": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "defaultReminderMessage": { "type": "string" },
+        "isSetupComplete": { "type": "boolean" }
+      },
+      "required": ["companyName", "ownerEmail", "status", "createdAt"]
+    },
+    "users": {
+      "title": "Users",
+      "description": "User accounts, roles, and tenant associations",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["tenantId", "email", "role"]
+    },
+    "plans": {
+      "title": "Subscription Plans",
+      "description": "Commercial SaaS tier configurations and pricing",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "priceMonthly": { "type": "number" },
+        "priceYearly": { "type": "number" },
+        "customerLimit": { "type": "number" },
+        "loanLimit": { "type": "number" },
+        "features": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["name", "priceMonthly", "priceYearly"]
+    },
+    "invoices": {
+      "title": "Invoices",
+      "description": "Subscription billing payment history and receipts",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "planId": { "type": "string" },
+        "planName": { "type": "string" },
+        "status": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "date": { "type": "string" },
+        "transactionRef": { "type": "string" }
+      },
+      "required": ["tenantId", "amount", "status", "date"]
+    },
+    "announcements": {
+      "title": "System Announcements",
+      "description": "Platform-wide messages broadcasted by Super Admin",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "targetPlan": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["title", "content", "createdAt"]
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Tenant specific application settings",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "adminName": { "type": "string" },
+        "upiId": { "type": "string" },
+        "appName": { "type": "string" },
+        "currency": { "type": "string" },
+        "whatsAppType": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["tenantId", "upiId"]
+    },
+    "customers": {
+      "title": "Customers",
+      "description": "Customer accounts and ledger profiles isolated per tenant",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "notes": { "type": "string" },
+        "photo": { "type": "string" },
+        "isArchived": { "type": "boolean" },
+        "dateAdded": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["tenantId", "name", "phone", "dateAdded"]
+    },
+    "transactions": {
+      "title": "Transactions",
+      "description": "Loan given and money received records isolated per tenant",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "type": { "type": "string" },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "paymentMode": { "type": "string" },
+        "date": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["tenantId", "customerId", "type", "amount", "date"]
+    },
+    "claims": {
+      "title": "Payment Claims",
+      "description": "Submitted UTR payment verification claims isolated per tenant",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "amount": { "type": "number" },
+        "utrNumber": { "type": "string" },
+        "paymentScreenshot": { "type": "string" },
+        "status": { "type": "string" },
+        "rejectionReason": { "type": "string" },
+        "date": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["tenantId", "customerId", "customerName", "amount", "utrNumber", "status", "date"]
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "In-app and push notification alerts for payment received, reminders, and system events",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "category": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "date": { "type": "string" },
+        "actionUrl": { "type": "string" }
+      },
+      "required": ["tenantId", "title", "message", "category", "isRead", "date"]
+    }
+  },
+  "firestore": {
+    "/tenants/{tenantId}": {
+      "schema": { "$ref": "#/entities/tenants" },
+      "description": "Company multi-tenant profiles"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/users" },
+      "description": "User profiles and permissions"
+    },
+    "/plans/{planId}": {
+      "schema": { "$ref": "#/entities/plans" },
+      "description": "SaaS plan specifications"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": { "$ref": "#/entities/invoices" },
+      "description": "Billing invoice history"
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/announcements" },
+      "description": "System broadcast messages"
+    },
+    "/settings/{docId}": {
+      "schema": { "$ref": "#/entities/settings" },
+      "description": "Application settings document"
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/customers" },
+      "description": "Customer ledger records"
+    },
+    "/transactions/{txnId}": {
+      "schema": { "$ref": "#/entities/transactions" },
+      "description": "Loan and payment transaction entries"
+    },
+    "/claims/{claimId}": {
+      "schema": { "$ref": "#/entities/claims" },
+      "description": "Payment verification claims submitted by users"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/notifications" },
+      "description": "In-app and push notification alerts"
+    }
+  }
+}

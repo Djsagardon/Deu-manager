@@ -1,0 +1,12 @@
+{
+  "projectId": "due-manager-ultimate",
+  "appId": "1:684002466566:android:80a37c7a6397b53338dc87",
+  "apiKey": "AIzaSyA_MzidaanYaBBFcY_lhLY1uAkITsamQnY",
+  "authDomain": "due-manager-ultimate.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "due-manager-ultimate.firebasestorage.app",
+  "messagingSenderId": "684002466566",
+  "measurementId": "",
+  "oAuthClientId": "",
+  "recaptchaSiteKey": ""
+}
