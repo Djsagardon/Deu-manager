@@ -135,6 +135,7 @@ export interface Customer {
   photoUrl?: string;
   address?: string;
   notes?: string;
+  dueDate?: string; // ISO date string or formatted date
   dateAdded: string; // ISO string
   lastUpdated?: string; // ISO string
   isArchived?: boolean;

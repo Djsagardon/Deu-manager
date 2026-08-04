@@ -150,8 +150,17 @@ export function generateBrandedQrCanvasBlob(
   });
 }
 
+export function formatPhoneNumberForWhatsApp(phone: string, defaultCountryCode: string = '91'): string {
+  if (!phone) return '';
+  let clean = phone.replace(/[^0-9]/g, '');
+  if (clean.length === 10) {
+    clean = defaultCountryCode.replace(/[^0-9]/g, '') + clean;
+  }
+  return clean;
+}
+
 export function formatWhatsAppReminderText(
-  customer: Customer,
+  customer: { name: string; phone: string; dueDate?: string },
   remainingDue: number,
   settings?: AppSettings,
   paymentPortalUrl?: string
@@ -160,44 +169,81 @@ export function formatWhatsAppReminderText(
   const payLink = `${appUrl}?mode=pay&customerPhone=${encodeURIComponent(customer.phone)}`;
   const storeName = settings?.adminName || 'Due Manager';
   const currency = settings?.currency || '₹';
-  const upiId = settings?.upiId || 'merchant@upi';
+  const upiId = settings?.upiId || '';
 
-  let template = settings?.defaultReminderMessage || `Hello {CustomerName},\n\nAccording to our records at {StoreName}, your pending amount is {Currency}{Amount}.\n\nPlease complete your payment using our QR code or payment confirmation link:\n{PayLink}\n\nThank you!\nRegards,\n{StoreName}`;
+  const paymentStatus = remainingDue > 0 ? 'Pending' : 'Settled';
+  const dueDateFormatted = customer.dueDate
+    ? new Date(customer.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : 'As soon as possible';
+
+  let template = settings?.defaultReminderMessage || `Hello {CustomerName},\n\nYour pending amount is {Currency}{Amount}.\nPayment Status: {PaymentStatus}\nDue Date: {DueDate}\n\nPlease complete your payment.\n\nThank you.\nRegards,\n{StoreName}`;
 
   template = template
     .replace(/{CustomerName}/g, customer.name)
     .replace(/{StoreName}/g, storeName)
     .replace(/{Currency}/g, currency)
     .replace(/{Amount}/g, remainingDue.toLocaleString('en-IN'))
+    .replace(/{PaymentStatus}/g, paymentStatus)
+    .replace(/{DueDate}/g, dueDateFormatted)
     .replace(/{UpiId}/g, upiId)
     .replace(/{PayLink}/g, payLink);
 
   return template;
 }
 
-export function openWhatsAppReminder(
+export function openWhatsAppDirectChat(
   phone: string,
   message: string,
-  isBusiness: boolean = false
-) {
-  let cleanPhone = phone.replace(/[^0-9]/g, '');
-  if (cleanPhone.length === 10) {
-    cleanPhone = '91' + cleanPhone;
+  options?: {
+    onNotify?: (msg: string) => void;
+    onError?: (err: string) => void;
+  }
+): boolean {
+  const cleanPhone = formatPhoneNumberForWhatsApp(phone);
+
+  if (!cleanPhone || cleanPhone.length < 10) {
+    const errorMsg = 'Invalid mobile number. Please ensure the customer has a valid 10-digit mobile number.';
+    if (options?.onError) options.onError(errorMsg);
+    return false;
   }
 
   const encodedMsg = encodeURIComponent(message);
+  // Universal WhatsApp Click-to-Chat URL targeting the exact customer phone
   const waUrl = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
 
-  window.open(waUrl, '_blank');
+  try {
+    const win = window.open(waUrl, '_blank');
+    if (!win) {
+      window.location.href = waUrl;
+    }
+    if (options?.onNotify) {
+      options.onNotify(`Opening WhatsApp chat directly for contact...`);
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to open WhatsApp:', err);
+    if (options?.onError) {
+      options.onError('Could not open WhatsApp. Please make sure WhatsApp is installed on your device.');
+    }
+    return false;
+  }
+}
+
+export function openWhatsAppReminder(
+  phone: string,
+  message: string,
+  _isBusiness: boolean = false
+) {
+  return openWhatsAppDirectChat(phone, message);
 }
 
 export async function sendWhatsAppReminderWithQr(
-  customer: { name: string; phone: string; remainingDue: number },
+  customer: { name: string; phone: string; remainingDue: number; dueDate?: string },
   settings: AppSettings,
   onNotify?: (msg: string) => void
 ) {
   const amount = customer.remainingDue;
-  const storeName = settings.adminName || 'Sagar';
+  const storeName = settings.adminName || 'Due Manager';
   const upiId = settings.upiId || '';
   const currency = settings.currency || '₹';
 
@@ -220,35 +266,11 @@ export async function sendWhatsAppReminderWithQr(
   );
 
   const fileName = `Payment_QR_${customer.name.replace(/\s+/g, '_')}_${amount}.png`;
-  const qrFile = new File([blob], fileName, { type: 'image/png' });
 
-  // 3. Format exact user reminder message
-  const message = `Hello ${customer.name},\n\nAccording to our records, your pending amount is ${currency}${amount.toLocaleString('en-IN')}.\n\nPlease scan the attached QR Code image to complete your payment.\n\nUPI ID:\n${upiId}\n\nThank you.\n\nRegards,\n${storeName}`;
+  // 3. Format exact reminder message
+  const message = formatWhatsAppReminderText(customer, amount, settings);
 
-  let cleanPhone = customer.phone.replace(/[^0-9]/g, '');
-  if (cleanPhone.length === 10) {
-    cleanPhone = '91' + cleanPhone;
-  }
-
-  // 4. Try Web Share API with File Attachment
-  if (navigator.canShare && navigator.canShare({ files: [qrFile] })) {
-    try {
-      await navigator.share({
-        title: `Payment QR Code - ${customer.name}`,
-        text: message,
-        files: [qrFile],
-      });
-      if (onNotify) onNotify('WhatsApp reminder & QR Code image shared successfully!');
-      return;
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        return; // User closed share window
-      }
-      console.warn('Web Share API unsupported or failed, using download fallback:', err);
-    }
-  }
-
-  // Fallback: Download QR PNG image and open WhatsApp with pre-filled message
+  // 4. Download / Copy QR image for user to attach if desired
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = fileName;
@@ -266,12 +288,14 @@ export async function sendWhatsAppReminderWithQr(
     console.log('Clipboard copy omitted:', clipErr);
   }
 
-  const encodedMsg = encodeURIComponent(message);
-  const waUrl = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
-  window.open(waUrl, '_blank');
-
-  if (onNotify) {
-    onNotify(`QR Code image downloaded! WhatsApp opened for ${customer.name}. Attach the downloaded image to complete sharing.`);
-  }
+  // 5. Open Direct WhatsApp Chat (bypassing share picker)
+  openWhatsAppDirectChat(customer.phone, message, {
+    onNotify: (msg) => {
+      if (onNotify) onNotify(`QR downloaded! ${msg}`);
+    },
+    onError: (err) => {
+      if (onNotify) onNotify(`❌ ${err}`);
+    },
+  });
 }
 

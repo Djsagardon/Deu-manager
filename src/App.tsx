@@ -12,6 +12,7 @@ import { AddCustomerModal } from './components/AddCustomerModal';
 import { AddTransactionModal } from './components/AddTransactionModal';
 import { QrCodeModal } from './components/QrCodeModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
+import { WhatsAppReminderModal } from './components/WhatsAppReminderModal';
 
 // SaaS Commercial Extensions
 import { EmailAuthModal } from './components/Auth/EmailAuthModal';
@@ -255,6 +256,8 @@ export default function App() {
   const [defaultTxnType, setDefaultTxnType] = useState<TransactionType>('LOAN_GIVEN');
   const [defaultTxnCustomerId, setDefaultTxnCustomerId] = useState<string | undefined>(undefined);
   const [qrModalCustomer, setQrModalCustomer] = useState<CustomerSummary | null>(null);
+  const [reminderCustomer, setReminderCustomer] = useState<CustomerSummary | null>(null);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState<boolean>(false);
   const [txnToDelete, setTxnToDelete] = useState<Transaction | null>(null);
 
   // Dark Mode State
@@ -675,10 +678,9 @@ export default function App() {
     }
   };
 
-  const handleSendReminder = async (customer: CustomerSummary) => {
-    await sendWhatsAppReminderWithQr(customer, settings, (msg) => {
-      showToast(msg);
-    });
+  const handleSendReminder = (customer: CustomerSummary) => {
+    setReminderCustomer(customer);
+    setIsReminderModalOpen(true);
   };
 
   const handleAutoVerifyPayment = async (paymentData: {
@@ -1245,6 +1247,18 @@ export default function App() {
           onConfirmDelete={handleConfirmDeleteTransaction}
         />
       )}
+
+      {/* WhatsApp Reminder Modal */}
+      <WhatsAppReminderModal
+        isOpen={isReminderModalOpen}
+        onClose={() => {
+          setIsReminderModalOpen(false);
+          setReminderCustomer(null);
+        }}
+        customer={reminderCustomer}
+        settings={settings}
+        onNotify={(msg) => showToast(msg)}
+      />
 
       {/* Email & Password Firebase Authentication Modal */}
       <EmailAuthModal
