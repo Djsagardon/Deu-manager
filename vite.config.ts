@@ -5,6 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: '/Deu-manager/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
