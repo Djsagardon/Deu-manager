@@ -63,8 +63,9 @@ jobs:
           # Sign the APK
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.keystore -storepass android -keypass android "$APK_PATH" deumanager
           
-          # Copy to root output directory as DueManager-Release.apk
+          # Copy to output directory with required app-release.apk name
           mkdir -p build-apk
+          cp "$APK_PATH" build-apk/app-release.apk
           cp "$APK_PATH" build-apk/DueManager-Release.apk
           
           # Also build Debug APK as backup
@@ -75,8 +76,10 @@ jobs:
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DueManager-Android-APKs
-          path: build-apk/*.apk
+          name: app-release-apk
+          path: |
+            build-apk/app-release.apk
+            build-apk/*.apk
           retention-days: 30
 
       - name: Create GitHub Release & Attach APKs
@@ -88,9 +91,10 @@ jobs:
           body: |
             ## Due Manager Android Application Release
             
-            This release contains the standalone signed Android APK for Due Manager.
+            This release contains the standalone signed Android APK (`app-release.apk`) for Due Manager.
             
             ### Downloads
+            - **Release APK**: `app-release.apk`
             - **Signed Release APK**: `DueManager-Release.apk`
             - **Debug APK**: `DueManager-Debug.apk`
             
@@ -100,6 +104,7 @@ jobs:
             - Direct UPI payment collection & dynamic QR code generation
             - Real-time notification synchronization & push alerts
           files: |
+            build-apk/app-release.apk
             build-apk/DueManager-Release.apk
             build-apk/DueManager-Debug.apk
         env:
