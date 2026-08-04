@@ -256,51 +256,93 @@ export async function sendWhatsAppReminderWithQr(
   const upiId = settings.upiId || '';
   const currency = settings.currency || '₹';
 
-  // 1. Generate QR Data URL
-  const qrDataUrl = await generateUpiQrDataUrl(
-    upiId,
-    storeName,
-    amount,
-    `Due Payment - ${customer.name}`
-  );
-
-  // 2. Generate PNG Image Blob & File
-  const blob = await generateBrandedQrCanvasBlob(
-    qrDataUrl,
-    customer.name,
-    amount,
-    upiId,
-    storeName,
-    currency
-  );
-
-  const fileName = `Payment_QR_${customer.name.replace(/\s+/g, '_')}_${amount}.png`;
-
-  // 3. Format exact reminder message
-  const message = formatWhatsAppReminderText(customer, amount, settings);
-
-  // 4. Download / Copy QR image for user to attach if desired
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-
-  try {
-    if (navigator.clipboard && window.ClipboardItem) {
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob }),
-      ]);
-    }
-  } catch (clipErr) {
-    console.log('Clipboard copy omitted:', clipErr);
+  const cleanPhone = formatPhoneNumberForWhatsApp(customer.phone);
+  if (!cleanPhone || cleanPhone.length < 10) {
+    if (onNotify) onNotify('❌ Invalid customer mobile number. Minimum 10 digits required.');
+    return;
   }
 
-  // 5. Open Direct WhatsApp Chat (bypassing share picker)
-  openWhatsAppDirectChat(customer.phone, message, {
+  // 1. Generate QR Data URL if UPI ID exists
+  let blob: Blob | null = null;
+  let qrFile: File | null = null;
+  const fileName = `Payment_QR_${customer.name.replace(/\s+/g, '_')}_${amount}.png`;
+
+  if (upiId) {
+    try {
+      const qrDataUrl = await generateUpiQrDataUrl(
+        upiId,
+        storeName,
+        amount,
+        `Due Payment - ${customer.name}`
+      );
+
+      blob = await generateBrandedQrCanvasBlob(
+        qrDataUrl,
+        customer.name,
+        amount,
+        upiId,
+        storeName,
+        currency
+      );
+
+      qrFile = new File([blob], fileName, { type: 'image/png' });
+    } catch (err) {
+      console.warn('Failed to generate QR blob for sharing:', err);
+    }
+  }
+
+  // 2. Format exact reminder message
+  const message = formatWhatsAppReminderText(customer, amount, settings);
+
+  // 3. Try Native Web Share API (Android Share Intent with File)
+  if (qrFile && typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [qrFile] })) {
+    try {
+      await navigator.share({
+        title: `Payment QR Code - ${customer.name}`,
+        text: message,
+        files: [qrFile],
+      });
+      if (onNotify) onNotify(`✅ Shared Payment QR Image & Reminder via Share Intent!`);
+      return;
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        if (onNotify) onNotify('Share cancelled by user.');
+        return;
+      }
+      console.warn('Native file share failed or unsupported, falling back to direct WhatsApp launch:', err);
+    }
+  }
+
+  // 4. Fallback: If blob exists, download QR image & copy to clipboard, then launch direct WhatsApp chat
+  if (blob) {
+    try {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.warn('Could not auto-download QR image:', e);
+    }
+
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob }),
+        ]);
+      }
+    } catch (clipErr) {
+      console.log('Clipboard copy omitted:', clipErr);
+    }
+  }
+
+  // 5. Open Direct WhatsApp Chat for targeted customer number
+  openWhatsAppDirectChat(cleanPhone, message, {
     onNotify: (msg) => {
-      if (onNotify) onNotify(`QR downloaded! ${msg}`);
+      if (onNotify) {
+        onNotify(blob ? `QR image downloaded! Opening WhatsApp for ${customer.name}...` : msg);
+      }
     },
     onError: (err) => {
       if (onNotify) onNotify(`❌ ${err}`);
