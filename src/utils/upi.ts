@@ -172,11 +172,23 @@ export function formatWhatsAppReminderText(
   customer: { name: string; phone: string; dueDate?: string },
   remainingDue: number,
   settings?: AppSettings,
-  paymentPortalUrl?: string
+  paymentPortalUrl?: string,
+  companyNameOverride?: string
 ): string {
-  const appUrl = paymentPortalUrl || window.location.origin;
-  const payLink = `${appUrl}?mode=pay&customerPhone=${encodeURIComponent(customer.phone)}`;
-  const storeName = settings?.adminName || 'Due Manager';
+  const cleanPhone = formatPhoneNumberForWhatsApp(customer.phone);
+  const baseUrl = paymentPortalUrl || (typeof window !== 'undefined' ? (window.location.origin + window.location.pathname) : '');
+  const payLink = `${baseUrl}?mode=pay&phone=${encodeURIComponent(cleanPhone || customer.phone)}`;
+
+  // Clean Store / Company Name - Remove any email domains or usernames
+  let storeName = companyNameOverride || settings?.appName || settings?.adminName || 'Mondal Traders';
+  if (storeName.includes('@')) {
+    storeName = storeName.split('@')[0];
+  }
+  // Strip non-letter email usernames if needed
+  if (!storeName || storeName.toLowerCase() === 'due manager' || /^[a-z0-9._]+$/i.test(storeName) && storeName.includes('16461')) {
+    storeName = companyNameOverride || 'Mondal Traders';
+  }
+
   const currency = settings?.currency || '₹';
   const upiId = settings?.upiId || '';
 
@@ -185,9 +197,12 @@ export function formatWhatsAppReminderText(
     ? new Date(customer.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
     : 'As soon as possible';
 
-  let template = settings?.defaultReminderMessage || `Hello {CustomerName},\n\nYour pending amount is {Currency}{Amount}.\nPayment Status: {PaymentStatus}\nDue Date: {DueDate}\n\nPlease complete your payment.\n\nThank you.\nRegards,\n{StoreName}`;
+  let template = settings?.defaultReminderMessage;
+  if (!template || !template.includes('{PayLink}')) {
+    template = `Hello {CustomerName},\n\nYour pending due amount with {StoreName} is {Currency}{Amount}.\nPayment Status: {PaymentStatus}\nDue Date: {DueDate}\n\nPay online via UPI or view details:\n{PayLink}\n\nThank you.\nRegards,\n{StoreName}`;
+  }
 
-  template = template
+  let message = template
     .replace(/{CustomerName}/g, customer.name)
     .replace(/{StoreName}/g, storeName)
     .replace(/{Currency}/g, currency)
@@ -197,7 +212,17 @@ export function formatWhatsAppReminderText(
     .replace(/{UpiId}/g, upiId)
     .replace(/{PayLink}/g, payLink);
 
-  return template;
+  // Sanitize footer to remove any remaining email username
+  if (message.includes('Regards,')) {
+    const parts = message.split('Regards,');
+    let footerText = parts[1].trim();
+    if (footerText.includes('@') || footerText.includes('mondalsagar16461')) {
+      footerText = storeName;
+    }
+    message = parts[0] + 'Regards,\n' + (footerText || storeName);
+  }
+
+  return message;
 }
 
 export function openWhatsAppDirectChat(

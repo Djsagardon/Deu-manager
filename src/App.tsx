@@ -28,6 +28,7 @@ import { FullScreenSubscription } from './components/Subscription/FullScreenSubs
 
 import { MandatoryUpiModal } from './components/MandatoryUpiModal';
 import { NotificationsCenterModal } from './components/NotificationsCenterModal';
+import { PublicCustomerPaymentPage } from './components/PublicCustomerPaymentPage';
 
 import {
   AppSettings,
@@ -259,6 +260,18 @@ export default function App() {
   const [reminderCustomer, setReminderCustomer] = useState<CustomerSummary | null>(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState<boolean>(false);
   const [txnToDelete, setTxnToDelete] = useState<Transaction | null>(null);
+
+  // Public Customer Payment View Detection
+  const [isPublicPaymentView] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'pay' || params.has('customerPhone') || params.has('phone');
+  });
+  const [publicPaymentPhone] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('phone') || params.get('customerPhone') || '';
+  });
 
   // Dark Mode State
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -956,6 +969,18 @@ export default function App() {
           </div>
         )}
       </div>
+    );
+  }
+
+  if (isPublicPaymentView) {
+    return (
+      <PublicCustomerPaymentPage
+        phoneParam={publicPaymentPhone}
+        customers={customerSummaries}
+        settings={settings}
+        currentTenant={currentTenant}
+        onPaymentSubmitted={handleSubmitClaim}
+      />
     );
   }
 
