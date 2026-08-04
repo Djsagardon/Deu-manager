@@ -1,0 +1,106 @@
+name: Build Android APK & GitHub Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-android:
+    name: Build Android Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Build Web App for Capacitor
+        run: npm run build:android
+
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      - name: Grant execute permission for Gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build Android Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Sign Release APK
+        run: |
+          # Locate generated APK
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "Found APK at: $APK_PATH"
+          
+          # Generate a signing key for the release APK
+          keytool -genkeypair -v -keystore release.keystore -alias deumanager -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=DueManager, OU=Mobile, O=App, L=City, S=State, C=IN"
+          
+          # Sign the APK
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.keystore -storepass android -keypass android "$APK_PATH" deumanager
+          
+          # Copy to root output directory as DueManager-Release.apk
+          mkdir -p build-apk
+          cp "$APK_PATH" build-apk/DueManager-Release.apk
+          
+          # Also build Debug APK as backup
+          cd android && ./gradlew assembleDebug --no-daemon && cd ..
+          DEBUG_APK=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          cp "$DEBUG_APK" build-apk/DueManager-Debug.apk
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DueManager-Android-APKs
+          path: build-apk/*.apk
+          retention-days: 30
+
+      - name: Create GitHub Release & Attach APKs
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: android-v${{ github.run_number }}
+          name: Due Manager Android Release v${{ github.run_number }}
+          body: |
+            ## Due Manager Android Application Release
+            
+            This release contains the standalone signed Android APK for Due Manager.
+            
+            ### Downloads
+            - **Signed Release APK**: `DueManager-Release.apk`
+            - **Debug APK**: `DueManager-Debug.apk`
+            
+            ### Features
+            - Native Capacitor Android wrapper
+            - Offline-first ledger management
+            - Direct UPI payment collection & dynamic QR code generation
+            - Real-time notification synchronization & push alerts
+          files: |
+            build-apk/DueManager-Release.apk
+            build-apk/DueManager-Debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

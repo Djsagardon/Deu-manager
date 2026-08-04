@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
+  const isCapacitor = process.env.CAPACITOR_BUILD === 'true' || process.env.BUILD_TARGET === 'android';
   return {
-    base: '/Deu-manager/',
+    base: isCapacitor ? './' : '/Deu-manager/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
