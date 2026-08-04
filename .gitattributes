@@ -1,7 +1,9 @@
 # Keep Gradle wrapper binary files untouched by git line-ending transformations
 *.jar binary
 *.png binary
+android/gradle/wrapper/gradle-wrapper.jar binary
 
 # Ensure gradlew executable shell script uses Unix LF line endings across operating systems
 gradlew text eol=lf
+android/gradlew text eol=lf
 *.sh text eol=lf
