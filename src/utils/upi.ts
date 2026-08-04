@@ -152,9 +152,18 @@ export function generateBrandedQrCanvasBlob(
 
 export function formatPhoneNumberForWhatsApp(phone: string, defaultCountryCode: string = '91'): string {
   if (!phone) return '';
+  // Strip all non-digit characters
   let clean = phone.replace(/[^0-9]/g, '');
+
+  // Remove leading zeroes if 11 or more digits (e.g. 09876543210 -> 9876543210)
+  while (clean.length > 10 && clean.startsWith('0')) {
+    clean = clean.substring(1);
+  }
+
+  // Prepend default country code if 10 digits
   if (clean.length === 10) {
-    clean = defaultCountryCode.replace(/[^0-9]/g, '') + clean;
+    const code = defaultCountryCode.replace(/[^0-9]/g, '') || '91';
+    clean = code + clean;
   }
   return clean;
 }

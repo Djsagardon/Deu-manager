@@ -17,6 +17,20 @@ if (typeof window !== 'undefined') {
       event.preventDefault();
     }
   });
+
+  window.addEventListener('error', (event) => {
+    const msg = event.message || String(event.error || '');
+    if (
+      msg.includes('Database is closing') ||
+      msg.includes('Database is hidden') ||
+      msg.includes('IndexedDB') ||
+      msg.includes('indexedDB')
+    ) {
+      console.warn('Handled browser database error:', msg);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  });
 }
 
 createRoot(document.getElementById('root')!).render(
