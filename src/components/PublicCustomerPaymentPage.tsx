@@ -14,8 +14,7 @@ import {
   ExternalLink,
   ArrowRight,
   Sparkles,
-  Download,
-  Zap
+  Download
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomerSummary, AppSettings, TenantWorkspace, PaymentClaim } from '../types';
