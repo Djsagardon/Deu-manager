@@ -36,6 +36,7 @@ interface AndroidSettingsProps {
   invoices: Invoice[];
   plans: SubscriptionPlan[];
   onUpdateCompanyProfile: (companyData: Partial<TenantWorkspace>) => void;
+  onUpdateUserProfile?: (profileData: { name: string; phone: string; companyName: string }) => void;
   onUpdateSettings: (newSettings: AppSettings) => void;
   onOpenPricingModal: () => void;
   onOpenInvoices: () => void;
@@ -63,6 +64,7 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
   invoices,
   plans,
   onUpdateCompanyProfile,
+  onUpdateUserProfile,
   onUpdateSettings,
   onOpenPricingModal,
   onOpenInvoices,
@@ -72,20 +74,22 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
   const [activeSubPage, setActiveSubPage] = useState<SubPage>('menu');
 
   // Company Profile & UPI Form states
-  const [ownerName, setOwnerName] = useState(userProfile?.name || currentTenant?.ownerName || 'Store Owner');
-  const [companyName, setCompanyName] = useState(currentTenant?.companyName || 'My Business Store');
+  const [ownerName, setOwnerName] = useState(userProfile?.name || currentTenant?.ownerName || '');
+  const [companyName, setCompanyName] = useState(currentTenant?.companyName || settings.appName || '');
   const [phone, setPhone] = useState(userProfile?.phone || currentTenant?.phone || '');
   const [businessType, setBusinessType] = useState(currentTenant?.businessType || 'Retail Store');
-  const [address, setAddress] = useState(currentTenant?.address || '123 Main Commercial Market');
+  const [address, setAddress] = useState(currentTenant?.address || '');
   const [upiId, setUpiId] = useState(currentTenant?.upiId || settings.upiId || '');
-  const [businessEmail, setBusinessEmail] = useState(currentTenant?.ownerEmail || 'owner@business.com');
+  const [businessEmail, setBusinessEmail] = useState(userProfile?.email || currentTenant?.ownerEmail || '');
 
   // Platform UPI Configuration
   const [usePlatformUpi, setUsePlatformUpi] = useState(currentTenant?.usePlatformUpi || false);
   const [platformUpiAcceptedTc, setPlatformUpiAcceptedTc] = useState(currentTenant?.platformUpiAcceptedTc || false);
 
-  // Settlement Details Form states
-  const [accountHolderName, setAccountHolderName] = useState(currentTenant?.settlementDetails?.accountHolderName || ownerName);
+  // Settlement Details Form states - Auto fill Account Holder Name from userProfile?.name
+  const [accountHolderName, setAccountHolderName] = useState(
+    currentTenant?.settlementDetails?.accountHolderName || userProfile?.name || currentTenant?.ownerName || ''
+  );
   const [bankName, setBankName] = useState(currentTenant?.settlementDetails?.bankName || '');
   const [accountNumber, setAccountNumber] = useState(currentTenant?.settlementDetails?.accountNumber || '');
   const [ifscCode, setIfscCode] = useState(currentTenant?.settlementDetails?.ifscCode || '');
@@ -517,19 +521,61 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
       {activeSubPage === 'my_profile' && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm text-xs">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-            <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300 font-black text-xl flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 font-black text-xl flex items-center justify-center">
               <User className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-slate-900 dark:text-white text-base">{ownerName}</h3>
-              <p className="text-slate-400">Primary Identity Profile</p>
+              <h3 className="font-black text-slate-900 dark:text-white text-base">
+                {ownerName || userProfile?.name || 'Account Profile'}
+              </h3>
+              <p className="text-slate-400">Primary Identity & Business Profile</p>
             </div>
           </div>
 
           <div className="space-y-3">
             <div>
-              <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">
-                Primary Mobile Identity / Phone Number *
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Full Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                placeholder="e.g. Ramesh Kumar"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Registered Email Address (Login ID)
+              </label>
+              <input
+                type="email"
+                disabled
+                value={userProfile?.email || businessEmail || ''}
+                className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-medium cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Company / Store Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="e.g. Sagar Traders"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Mobile Number *
               </label>
               <input
                 type="tel"
@@ -542,37 +588,29 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">
-                Owner Full Name
-              </label>
-              <input
-                type="text"
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold dark:text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-600 dark:text-slate-400 mb-1">
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Account Role
               </label>
               <input
                 type="text"
                 disabled
-                value={userProfile?.role || 'COMPANY_ADMIN (Store Owner)'}
+                value={userProfile?.role || 'STORE_OWNER'}
                 className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 font-medium cursor-not-allowed"
               />
             </div>
 
             <button
+              type="button"
               onClick={() => {
-                onUpdateCompanyProfile({ ownerName, phone });
-                onUpdateSettings({ ...settings, adminName: ownerName, adminPhone: phone });
-                showToast('Profile & Mobile Number updated!');
+                if (onUpdateUserProfile) {
+                  onUpdateUserProfile({ name: ownerName, phone, companyName });
+                }
+                onUpdateCompanyProfile({ ownerName, phone, companyName });
+                onUpdateSettings({ ...settings, adminName: ownerName, adminPhone: phone, appName: companyName });
+                showToast('✅ Profile saved to Firebase!');
                 setActiveSubPage('menu');
               }}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer mt-2"
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer mt-2 text-xs"
             >
               Save Profile Changes
             </button>

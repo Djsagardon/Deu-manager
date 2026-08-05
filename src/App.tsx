@@ -7,7 +7,7 @@ import { CustomerDetail } from './components/CustomerDetail';
 import { PaymentPortal } from './components/PaymentPortal';
 import { Reports } from './components/Reports';
 import { SettingsModal } from './components/SettingsModal';
-import { SetupWizardModal } from './components/SetupWizardModal';
+import { FirstProfileSetupModal } from './components/FirstProfileSetupModal';
 import { AddCustomerModal } from './components/AddCustomerModal';
 import { AddTransactionModal } from './components/AddTransactionModal';
 import { QrCodeModal } from './components/QrCodeModal';
@@ -79,6 +79,8 @@ import {
   saveSettingsToFirestore,
   saveTenantWorkspaceToFirestore,
   saveUserProfileToFirestore,
+  fetchUserProfileFromFirestore,
+  fetchTenantWorkspaceFromFirestore,
   deleteCustomerFromFirestore,
   deleteTransactionFromFirestore,
   subscribeToNotifications,
@@ -292,12 +294,31 @@ export default function App() {
   // Auto Login Check & Auth Listener
   useEffect(() => {
     initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      const storedUser = getStoredUserProfile();
-      if (!firebaseUser && !storedUser) {
-        setUserProfile(null);
-        setCurrentTenant(null);
-        setIsAuthModalOpen(true);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const fetchedProfile = await fetchUserProfileFromFirestore(firebaseUser.uid);
+          const tenantId = fetchedProfile?.tenantId || `tenant_${firebaseUser.uid}`;
+          const fetchedTenant = await fetchTenantWorkspaceFromFirestore(tenantId);
+          if (fetchedProfile) {
+            setUserProfile(fetchedProfile);
+          }
+          if (fetchedTenant) {
+            setCurrentTenant(fetchedTenant);
+            if (fetchedProfile) {
+              saveAuthSession(fetchedProfile, fetchedTenant);
+            }
+          }
+        } catch (err) {
+          console.warn('Error syncing profile from Firestore on auth change:', err);
+        }
+      } else {
+        const storedUser = getStoredUserProfile();
+        if (!storedUser) {
+          setUserProfile(null);
+          setCurrentTenant(null);
+          setIsAuthModalOpen(true);
+        }
       }
     });
     return () => unsubscribe();
@@ -327,7 +348,6 @@ export default function App() {
 
     // Close all open modals
     setIsSettingsOpen(false);
-    setIsSetupWizardOpen(false);
     setIsAddCustomerOpen(false);
     setIsAddTransactionOpen(false);
     setIsPricingModalOpen(false);
@@ -521,13 +541,6 @@ export default function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
-
-  useEffect(() => {
-    if (!checkIsOnboarded()) {
-      setIsSetupWizardOpen(true);
-      setOnboarded(true);
-    }
-  }, []);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -1149,6 +1162,31 @@ export default function App() {
                 userProfile={userProfile}
                 plans={plans}
                 invoices={invoices}
+                onUpdateUserProfile={async (profileData) => {
+                  if (userProfile) {
+                    const updatedProf: UserProfile = {
+                      ...userProfile,
+                      name: profileData.name,
+                      phone: profileData.phone,
+                    };
+                    setUserProfile(updatedProf);
+                    await saveUserProfileToFirestore(updatedProf).catch(console.warn);
+                  }
+                  if (currentTenant) {
+                    const updatedTen: TenantWorkspace = {
+                      ...currentTenant,
+                      companyName: profileData.companyName,
+                      ownerName: profileData.name,
+                      phone: profileData.phone,
+                      isSetupComplete: true,
+                    };
+                    setCurrentTenant(updatedTen);
+                    await saveTenantWorkspaceToFirestore(updatedTen).catch(console.warn);
+                    if (userProfile) {
+                      saveAuthSession(userProfile, updatedTen);
+                    }
+                  }
+                }}
                 onUpdateCompanyProfile={(companyData) => {
                   if (currentTenant) {
                     const updated = { ...currentTenant, ...companyData };
@@ -1222,11 +1260,61 @@ export default function App() {
         onSaveSettings={(newSettings) => setSettings(newSettings)}
       />
 
-      <SetupWizardModal
-        isOpen={isSetupWizardOpen}
-        onClose={() => setIsSetupWizardOpen(false)}
-        settings={settings}
-        onSaveSettings={(newSettings) => setSettings(newSettings)}
+      <FirstProfileSetupModal
+        isOpen={Boolean(
+          userProfile &&
+            currentTenant &&
+            (!currentTenant.isSetupComplete ||
+              !userProfile.name ||
+              !currentTenant.companyName ||
+              !userProfile.phone ||
+              (!currentTenant.upiId && !settings.upiId))
+        )}
+        initialName={userProfile?.name || ''}
+        initialCompanyName={currentTenant?.companyName || ''}
+        initialPhone={userProfile?.phone || currentTenant?.phone || ''}
+        initialUpiId={currentTenant?.upiId || settings.upiId || ''}
+        onSaveProfile={async (data) => {
+          if (!userProfile || !currentTenant) return;
+
+          const updatedProfile: UserProfile = {
+            ...userProfile,
+            name: data.name,
+            phone: data.phone,
+          };
+
+          const updatedTenant: TenantWorkspace = {
+            ...currentTenant,
+            companyName: data.companyName,
+            ownerName: data.name,
+            phone: data.phone,
+            upiId: data.upiId,
+            isSetupComplete: true,
+          };
+
+          const updatedSettings: AppSettings = {
+            ...settings,
+            appName: data.companyName,
+            adminName: data.name,
+            adminPhone: data.phone,
+            upiId: data.upiId,
+          };
+
+          setUserProfile(updatedProfile);
+          setCurrentTenant(updatedTenant);
+          setSettings(updatedSettings);
+
+          saveAuthSession(updatedProfile, updatedTenant);
+          saveStoredSettings(updatedSettings);
+
+          if (isOnline) {
+            await saveUserProfileToFirestore(updatedProfile).catch(console.warn);
+            await saveTenantWorkspaceToFirestore(updatedTenant).catch(console.warn);
+            await saveSettingsToFirestore(updatedSettings, updatedTenant.id).catch(console.warn);
+          }
+
+          showToast(`✅ Profile setup completed for ${data.companyName}!`);
+        }}
       />
 
       <AddCustomerModal
