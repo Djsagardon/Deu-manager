@@ -1,6 +1,7 @@
 import React from 'react';
-import { Wallet, MapPin, Bell } from 'lucide-react';
+import { MapPin, Bell } from 'lucide-react';
 import { AppSettings, UserProfile, TenantWorkspace } from '../types';
+import { DueManagerLogo } from './DueManagerLogo';
 
 interface NavbarProps {
   activeTab: 'dashboard' | 'customers' | 'claims' | 'reports' | 'settings' | 'subscription';
@@ -31,24 +32,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   unreadNotificationsCount = 0,
   onOpenNotifications,
 }) => {
-  const appName = settings.appName || 'Due Manager';
   const companyName = currentTenant?.companyName || 'My Business Store';
   const address = currentTenant?.address || settings.country || 'Main Commercial Market';
 
   return (
     <header className="sticky top-0 z-30 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white shadow-md transition-colors">
-      <div className="max-w-3xl mx-auto px-4 py-3.5">
+      <div className="max-w-3xl mx-auto px-4 py-3">
         <div className="flex items-center gap-3 justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 text-white flex items-center justify-center font-bold shadow-md shrink-0">
-              <Wallet className="w-5 h-5" />
+            {/* Official Small App Logo */}
+            <div className="p-1.5 bg-slate-800/80 border border-slate-700/80 rounded-2xl shadow-sm shrink-0 flex items-center justify-center">
+              <DueManagerLogo variant="icon" iconOnlySize={32} />
             </div>
             
             <div className="min-w-0 flex-1">
-              {/* Application Name */}
-              <div className="text-[11px] font-black uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
-                <span>{appName}</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              {/* Application Name with Logo Accent */}
+              <div className="text-[11px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <span>Due Manager</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               </div>
 
               {/* Company / Store Name */}

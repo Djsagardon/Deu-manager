@@ -1,0 +1,19 @@
+<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer Squircle Container -->
+  <rect x="8" y="8" width="184" height="184" rx="46" ry="46" fill="#121212" stroke="#FFFFFF" stroke-width="5"/>
+
+  <!-- Capital 'D' Loop -->
+  <path d="M 68 36 H 116 C 152 36 174 58 174 100 C 174 142 152 164 116 164 H 88 V 144 H 116 C 138 144 152 130 152 100 C 152 70 138 56 116 56 H 68 V 36 Z" fill="#FFFFFF"/>
+
+  <!-- Green Top Bar of Rupee Symbol -->
+  <polygon points="50,50 102,50 94,64 42,64" fill="#18C37E"/>
+
+  <!-- White Second Bar of Rupee Symbol -->
+  <rect x="42" y="72" width="56" height="12" rx="3" fill="#FFFFFF"/>
+
+  <!-- White Stem and Leg of Rupee Symbol -->
+  <path d="M 46 64 H 62 V 102 C 74 90 92 84 104 84 V 98 C 92 98 80 106 70 118 L 48 156 H 26 L 56 112 V 64 H 46 Z" fill="#FFFFFF"/>
+
+  <!-- Green Check Mark (✓) -->
+  <path d="M 94 118 L 112 136 L 148 90" stroke="#18C37E" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

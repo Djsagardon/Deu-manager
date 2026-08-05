@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { User, Building2, Phone, QrCode, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { User, Building2, Phone, QrCode, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { DueManagerLogo } from './DueManagerLogo';
 
 interface FirstProfileSetupModalProps {
   isOpen: boolean;
@@ -69,15 +70,16 @@ export const FirstProfileSetupModal: React.FC<FirstProfileSetupModalProps> = ({
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white relative border-b border-indigo-900/50">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center font-black text-indigo-300 shadow-md">
-              <Sparkles className="w-6 h-6 text-amber-400" />
+            <div className="p-1.5 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-md flex items-center justify-center">
+              <DueManagerLogo variant="icon" iconOnlySize={36} />
             </div>
             <div>
-              <h2 className="font-black text-lg leading-tight tracking-wide">
-                First Time Profile Setup
+              <h2 className="font-black text-lg leading-tight tracking-wide flex items-center gap-1">
+                <span>Due</span><span className="text-emerald-400">Manager</span>
+                <span className="text-xs text-indigo-300 font-normal ml-1">Setup</span>
               </h2>
               <p className="text-xs text-indigo-200/90 font-medium">
-                Complete your business information to unlock all ledger features
+                Complete your store details to activate full ledger features
               </p>
             </div>
           </div>

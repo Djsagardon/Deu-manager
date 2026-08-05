@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DueManagerLogo } from '../DueManagerLogo';
 import {
   User,
   Building2,
@@ -1220,17 +1221,20 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
 
       {/* SubPage: About App */}
       {activeSubPage === 'about' && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm text-xs text-center">
-          <div className="w-16 h-16 rounded-3xl bg-indigo-600 text-white font-black text-2xl mx-auto flex items-center justify-center shadow-lg">
-            DM
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 space-y-5 shadow-sm text-xs text-center">
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/80 rounded-3xl border border-slate-200 dark:border-slate-700/80 inline-flex items-center justify-center shadow-lg mx-auto">
+            <DueManagerLogo variant="full" size="xl" />
           </div>
           <div>
-            <h3 className="font-black text-slate-900 dark:text-white text-base">Commercial Due Ledger Pro</h3>
-            <p className="text-slate-400">Production Android Release v2.4.0</p>
+            <h3 className="font-black text-slate-900 dark:text-white text-lg">Due Manager</h3>
+            <p className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">Production Release v2.5.0</p>
           </div>
-          <p className="text-slate-500 max-w-sm mx-auto leading-relaxed">
-            Enterprise-grade customer ledger, loan tracker, UPI payment claim verification, and automated WhatsApp reminder platform for modern retail stores and businesses.
+          <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+            Enterprise-grade customer ledger, loan tracker, UPI payment verification, and automated WhatsApp reminder platform for modern retail stores and commercial businesses.
           </p>
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 font-medium">
+            © 2026 Due Manager Inc. All Rights Reserved.
+          </div>
         </div>
       )}
 

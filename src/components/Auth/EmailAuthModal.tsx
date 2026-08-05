@@ -13,9 +13,9 @@ import {
   RefreshCw,
   KeyRound,
   ShieldCheck,
-  Wallet,
   Phone
 } from 'lucide-react';
+import { DueManagerLogo } from '../DueManagerLogo';
 import { UserProfile, TenantWorkspace, SubscriptionPlan } from '../../types';
 import {
   registerWithEmail,
@@ -412,12 +412,12 @@ export const EmailAuthModal: React.FC<EmailAuthModalProps> = ({
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-indigo-900 via-slate-900 to-blue-950 text-white relative flex items-center justify-between border-b border-indigo-900/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center font-black text-indigo-300 shadow-md">
-              <Wallet className="w-5 h-5 text-indigo-400" />
+            <div className="p-1.5 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-md flex items-center justify-center">
+              <DueManagerLogo variant="icon" iconOnlySize={36} />
             </div>
             <div>
-              <h2 className="font-black text-base leading-tight tracking-wide">
-                Due Manager Workspace
+              <h2 className="font-black text-base leading-tight tracking-wide flex items-center gap-1">
+                <span>Due</span><span className="text-emerald-400">Manager</span>
               </h2>
               <p className="text-[11px] text-indigo-200/80 font-semibold">
                 {mode === 'LOGIN' && 'Secure Store Login'}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Sparkles, ArrowRight } from 'lucide-react';
+import { SplashScreen } from './components/SplashScreen';
 import { Navbar } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
 import { CustomerList } from './components/CustomerList';
@@ -263,6 +264,11 @@ export default function App() {
   const [isReminderModalOpen, setIsReminderModalOpen] = useState<boolean>(false);
   const [txnToDelete, setTxnToDelete] = useState<Transaction | null>(null);
 
+  // Splash Screen & Silent Background Data Preloading
+  const [isSplashLoading, setIsSplashLoading] = useState<boolean>(true);
+  const [splashStatus, setSplashStatus] = useState<string>('Initializing Due Manager...');
+  const [isAuthChecked, setIsAuthChecked] = useState<boolean>(false);
+
   // Public Customer Payment View Detection
   const [isPublicPaymentView] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -296,6 +302,7 @@ export default function App() {
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        setSplashStatus('Loading Profile & Store Ledger...');
         try {
           const fetchedProfile = await fetchUserProfileFromFirestore(firebaseUser.uid);
           const tenantId = fetchedProfile?.tenantId || `tenant_${firebaseUser.uid}`;
@@ -320,9 +327,27 @@ export default function App() {
           setIsAuthModalOpen(true);
         }
       }
+      setIsAuthChecked(true);
     });
     return () => unsubscribe();
   }, []);
+
+  // Splash Screen Preloader Dismissal Handler
+  useEffect(() => {
+    if (!isAuthChecked) return;
+
+    if (!userProfile && !currentTenant) {
+      setIsSplashLoading(false);
+      return;
+    }
+
+    setSplashStatus('Preparing Dashboard Statistics...');
+    const timer = setTimeout(() => {
+      setIsSplashLoading(false);
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [isAuthChecked, userProfile, currentTenant]);
 
   // Logout Handlers
   const handleRequestLogout = () => {
@@ -983,6 +1008,10 @@ export default function App() {
         )}
       </div>
     );
+  }
+
+  if (isSplashLoading) {
+    return <SplashScreen statusMessage={splashStatus} isReady={false} />;
   }
 
   if (isPublicPaymentView) {
