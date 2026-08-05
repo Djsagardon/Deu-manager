@@ -3,7 +3,7 @@
   "name": "Due Manager - Smart Business Ledger",
   "icons": [
     {
-      "src": "./logo.svg",
+      "src": "logo.svg",
       "type": "image/svg+xml",
       "sizes": "192x192 512x512",
       "purpose": "any maskable"
