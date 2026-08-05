@@ -6,7 +6,7 @@ import {defineConfig} from 'vite';
 export default defineConfig(({ mode }) => {
   const isCapacitor = process.env.CAPACITOR_BUILD === 'true' || process.env.BUILD_TARGET === 'android';
   return {
-    base: isCapacitor ? './' : '/Deu-manager/',
+    base: process.env.VITE_BASE || './',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
