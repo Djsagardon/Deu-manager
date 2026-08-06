@@ -45,10 +45,11 @@ jobs:
 
       - name: Verify and Restore Gradle Wrapper
         run: |
-          if [ ! -f "android/gradle/wrapper/gradle-wrapper.jar" ] || [ ! -s "android/gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Gradle wrapper JAR missing or empty! Restoring..."
+          chmod +x android/gradlew
+          if [ ! -f "android/gradle/wrapper/gradle-wrapper.jar" ] || ! unzip -t "android/gradle/wrapper/gradle-wrapper.jar" >/dev/null 2>&1; then
+            echo "Gradle wrapper JAR missing or corrupt! Restoring valid wrapper JAR..."
             mkdir -p android/gradle/wrapper
-            curl -sSL -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+            curl -sSL -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.13.0/gradle/wrapper/gradle-wrapper.jar
           fi
 
       - name: Grant execute permission for Gradlew

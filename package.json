@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
-    "build:android": "CAPACITOR_BUILD=true vite build && npx cap sync android",
+    "build:android": "cp google-services.json android/app/ 2>/dev/null || true; CAPACITOR_BUILD=true vite build && npx cap sync android",
     "cap:sync": "cap sync",
     "cap:copy": "cap copy",
     "preview": "vite preview",
