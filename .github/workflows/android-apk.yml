@@ -1,4 +1,4 @@
-name: Build Android APK & GitHub Release
+name: Build Android APK
 
 on:
   push:
@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   build-android:
@@ -27,6 +26,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '21'
+          cache: 'gradle'
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
@@ -37,20 +37,8 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Build Web App for Capacitor
+      - name: Build Web App & Sync Capacitor
         run: npm run build:android
-
-      - name: Sync Capacitor Android
-        run: npx cap sync android
-
-      - name: Verify and Restore Gradle Wrapper
-        run: |
-          chmod +x android/gradlew
-          if [ ! -f "android/gradle/wrapper/gradle-wrapper.jar" ] || ! unzip -t "android/gradle/wrapper/gradle-wrapper.jar" >/dev/null 2>&1; then
-            echo "Gradle wrapper JAR missing or corrupt! Restoring valid wrapper JAR..."
-            mkdir -p android/gradle/wrapper
-            curl -sSL -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.13.0/gradle/wrapper/gradle-wrapper.jar
-          fi
 
       - name: Grant execute permission for Gradlew
         run: chmod +x android/gradlew
@@ -60,38 +48,21 @@ jobs:
           cd android
           ./gradlew assembleRelease --no-daemon
 
-      - name: Sign Release APK
+      - name: Prepare Release APK
         run: |
-          # Locate generated APK
+          mkdir -p build-apk
           APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
           echo "Found APK at: $APK_PATH"
-          
-          # Generate a signing key for the release APK
-          keytool -genkeypair -v -keystore release.keystore -alias deumanager -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=DueManager, OU=Mobile, O=App, L=City, S=State, C=IN"
-          
-          # Sign the APK
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.keystore -storepass android -keypass android "$APK_PATH" deumanager
-          
-          # Copy to output directory with required app-release.apk name
-          mkdir -p build-apk
           cp "$APK_PATH" build-apk/app-release.apk
-          cp "$APK_PATH" build-apk/DueManager-Release.apk
-          
-          # Also build Debug APK as backup
-          cd android && ./gradlew assembleDebug --no-daemon && cd ..
-          DEBUG_APK=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -n 1)
-          cp "$DEBUG_APK" build-apk/DueManager-Debug.apk
 
-      - name: Upload APK Artifacts
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: |
-            build-apk/app-release.apk
-            build-apk/*.apk
+          path: build-apk/app-release.apk
           retention-days: 30
 
-      - name: Create GitHub Release & Attach APKs
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
@@ -99,22 +70,8 @@ jobs:
           name: Due Manager Android Release v${{ github.run_number }}
           body: |
             ## Due Manager Android Application Release
-            
-            This release contains the standalone signed Android APK (`app-release.apk`) for Due Manager.
-            
-            ### Downloads
-            - **Release APK**: `app-release.apk`
-            - **Signed Release APK**: `DueManager-Release.apk`
-            - **Debug APK**: `DueManager-Debug.apk`
-            
-            ### Features
-            - Native Capacitor Android wrapper
-            - Offline-first ledger management
-            - Direct UPI payment collection & dynamic QR code generation
-            - Real-time notification synchronization & push alerts
-          files: |
-            build-apk/app-release.apk
-            build-apk/DueManager-Release.apk
-            build-apk/DueManager-Debug.apk
+            This release contains the standalone Android APK (`app-release.apk`) for Due Manager.
+          files: build-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
