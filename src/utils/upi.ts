@@ -7,10 +7,11 @@ export function buildUpiPayUrl(
   amount: number,
   note: string
 ): string {
-  const cleanUpi = upiId.trim();
+  const cleanUpi = upiId ? upiId.trim().replace(/\s+/g, '') : '';
   const encodedName = encodeURIComponent(adminName || 'Due Manager');
   const encodedNote = encodeURIComponent(note || 'Pending Due Payment');
-  const formattedAmount = amount.toFixed(2);
+  const numericAmount = parseFloat(String(amount));
+  const formattedAmount = (!isNaN(numericAmount) && numericAmount > 0) ? numericAmount.toFixed(2) : '0.00';
 
   return `upi://pay?pa=${cleanUpi}&pn=${encodedName}&am=${formattedAmount}&cu=INR&tn=${encodedNote}`;
 }
@@ -177,20 +178,30 @@ export function formatWhatsAppReminderText(
 ): string {
   const cleanPhone = formatPhoneNumberForWhatsApp(customer.phone);
   const baseUrl = paymentPortalUrl || (typeof window !== 'undefined' ? (window.location.origin + window.location.pathname) : '');
-  const payLink = `${baseUrl}?mode=pay&phone=${encodeURIComponent(cleanPhone || customer.phone)}`;
 
   // Clean Store / Company Name - Remove any email domains or usernames
   let storeName = companyNameOverride || settings?.appName || settings?.adminName || 'Mondal Traders';
   if (storeName.includes('@')) {
     storeName = storeName.split('@')[0];
   }
-  // Strip non-letter email usernames if needed
-  if (!storeName || storeName.toLowerCase() === 'due manager' || /^[a-z0-9._]+$/i.test(storeName) && storeName.includes('16461')) {
+  if (!storeName || storeName.toLowerCase() === 'due manager' || (/^[a-z0-9._]+$/i.test(storeName) && storeName.includes('16461'))) {
     storeName = companyNameOverride || 'Mondal Traders';
   }
 
   const currency = settings?.currency || '₹';
   const upiId = settings?.upiId || '';
+  const tenantId = settings?.tenantId || '';
+
+  const payLinkParams = new URLSearchParams();
+  payLinkParams.set('mode', 'pay');
+  payLinkParams.set('phone', cleanPhone || customer.phone);
+  if (remainingDue > 0) payLinkParams.set('amt', remainingDue.toString());
+  if (customer.name) payLinkParams.set('name', customer.name);
+  if (storeName) payLinkParams.set('store', storeName);
+  if (upiId) payLinkParams.set('upi', upiId);
+  if (tenantId) payLinkParams.set('tenant', tenantId);
+
+  const payLink = `${baseUrl}?${payLinkParams.toString()}`;
 
   const paymentStatus = remainingDue > 0 ? 'Pending' : 'Settled';
   const dueDateFormatted = customer.dueDate

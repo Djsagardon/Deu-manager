@@ -934,6 +934,40 @@ export default function App() {
     setAnnouncements((prev) => [newAnn, ...prev]);
   };
 
+  // Live Sync for Public Payment View when unauthenticated
+  useEffect(() => {
+    if (isPublicPaymentView && !userProfile) {
+      const params = new URLSearchParams(window.location.search);
+      const urlTenant = params.get('tenant') || params.get('tenantId') || 'default_tenant';
+
+      const unsubSettings = subscribeSettingsFromFirestore(
+        urlTenant,
+        (s) => { if (s) setSettings(s); }
+      );
+      const unsubCustomers = subscribeCustomersFromFirestore(
+        urlTenant,
+        (cList) => { if (cList) setCustomers(cList); }
+      );
+
+      return () => {
+        unsubSettings();
+        unsubCustomers();
+      };
+    }
+  }, [isPublicPaymentView, userProfile]);
+
+  if (isPublicPaymentView) {
+    return (
+      <PublicCustomerPaymentPage
+        phoneParam={publicPaymentPhone}
+        customers={customerSummaries}
+        settings={settings}
+        currentTenant={currentTenant}
+        onPaymentSubmitted={handleSubmitClaim}
+      />
+    );
+  }
+
   if (!userProfile) {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex flex-col justify-between relative overflow-hidden font-sans">
@@ -1012,18 +1046,6 @@ export default function App() {
 
   if (isSplashLoading) {
     return <SplashScreen statusMessage={splashStatus} isReady={false} />;
-  }
-
-  if (isPublicPaymentView) {
-    return (
-      <PublicCustomerPaymentPage
-        phoneParam={publicPaymentPhone}
-        customers={customerSummaries}
-        settings={settings}
-        currentTenant={currentTenant}
-        onPaymentSubmitted={handleSubmitClaim}
-      />
-    );
   }
 
   return (

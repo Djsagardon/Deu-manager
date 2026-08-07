@@ -21,22 +21,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '21'
-
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Build Web App & Sync Capacitor
+      - name: Build Web Application
         run: npm run build:android
 
       - name: Grant execute permission for Gradlew
@@ -47,15 +47,32 @@ jobs:
           cd android
           ./gradlew assembleRelease --no-daemon
 
-      - name: Prepare Release APK
+      - name: Validate APK Existence & Size
         run: |
-          mkdir -p build-apk
-          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "Locating generated Android Release APK..."
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)
           if [ -z "$APK_PATH" ]; then
-            echo "Error: Release APK not found!"
+            echo "::error::Release APK not found in android/app/build/outputs/apk/release!"
+            echo "Checking android/app/build/outputs directory structure:"
+            find android/app/build/outputs -type f || true
             exit 1
           fi
-          echo "Found APK at: $APK_PATH"
+
+          SIZE_BYTES=$(stat -c%s "$APK_PATH" 2>/dev/null || stat -f%z "$APK_PATH" 2>/dev/null || echo "0")
+          SIZE_HUMAN=$(ls -lh "$APK_PATH" | awk '{print $5}')
+
+          if [ "$SIZE_BYTES" -le 0 ]; then
+            echo "::error::Generated APK file is empty (0 bytes)!"
+            exit 1
+          fi
+
+          echo "=========================================="
+          echo "SUCCESS: Valid Release APK found!"
+          echo "Path: $APK_PATH"
+          echo "Size: $SIZE_HUMAN ($SIZE_BYTES bytes)"
+          echo "=========================================="
+
+          mkdir -p build-apk
           cp "$APK_PATH" build-apk/app-release.apk
 
       - name: Upload APK Artifact
@@ -78,5 +95,3 @@ jobs:
           files: build-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-

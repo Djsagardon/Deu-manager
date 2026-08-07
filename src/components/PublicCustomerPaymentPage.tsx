@@ -15,7 +15,8 @@ import {
   ArrowRight,
   Sparkles,
   Download,
-  Zap
+  Zap,
+  Clock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomerSummary, AppSettings, TenantWorkspace, PaymentClaim } from '../types';
@@ -41,6 +42,7 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
   const [loading, setLoading] = useState<boolean>(true);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
+  const [hasAttemptedUpiPay, setHasAttemptedUpiPay] = useState<boolean>(false);
   
   // Payment Proof Form
   const [utrNumber, setUtrNumber] = useState<string>('');
@@ -50,12 +52,20 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
   const [submittedUtr, setSubmittedUtr] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  const cleanPhone = formatPhoneNumberForWhatsApp(phoneParam);
+  // Parse URL search parameters for WhatsApp guest visitors
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const urlPhone = urlParams.get('phone') || urlParams.get('customerPhone') || phoneParam || '';
+  const urlAmt = urlParams.get('amt') || urlParams.get('amount') || '';
+  const urlName = urlParams.get('name') || urlParams.get('customerName') || '';
+  const urlStore = urlParams.get('store') || urlParams.get('storeName') || '';
+  const urlUpi = urlParams.get('upi') || '';
+
+  const cleanPhone = formatPhoneNumberForWhatsApp(urlPhone || phoneParam);
   const currencySymbol = settings?.currency || currentTenant?.currency || '₹';
-  const upiId = settings?.upiId || currentTenant?.upiId || '';
+  const upiId = urlUpi || settings?.upiId || currentTenant?.upiId || '';
 
   // Determine Store Name cleanly without email addresses
-  let storeName = currentTenant?.companyName || settings?.appName || settings?.adminName || 'Mondal Traders';
+  let storeName = urlStore || currentTenant?.companyName || settings?.appName || settings?.adminName || 'Mondal Traders';
   if (storeName.includes('@')) {
     storeName = storeName.split('@')[0];
   }
@@ -65,23 +75,40 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
 
   useEffect(() => {
     setLoading(true);
-    // Find customer by phone match
+    let matched: CustomerSummary | null = null;
     if (customers && customers.length > 0) {
-      const found = customers.find((c) => {
+      matched = customers.find((c) => {
         const cClean = formatPhoneNumberForWhatsApp(c.phone);
         return cClean === cleanPhone || c.phone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, '');
+      }) || null;
+    }
+
+    if (matched) {
+      setCustomer(matched);
+      setCustomAmount(matched.remainingDue > 0 ? String(matched.remainingDue) : '0');
+    } else {
+      const fallbackAmt = urlAmt ? parseFloat(urlAmt) : 0;
+      const fallbackName = urlName || 'Valued Customer';
+      setCustomer({
+        id: 'cust_whatsapp_guest',
+        name: fallbackName,
+        phone: cleanPhone || urlPhone || '0000000000',
+        remainingDue: fallbackAmt,
+        totalLoan: fallbackAmt,
+        totalPaid: 0,
+        loanCount: 1,
+        lastTransactionDate: new Date().toISOString(),
       });
-      if (found) {
-        setCustomer(found);
-        setCustomAmount(found.remainingDue > 0 ? String(found.remainingDue) : '0');
+      if (fallbackAmt > 0) {
+        setCustomAmount(String(fallbackAmt));
       }
     }
     setLoading(false);
-  }, [customers, cleanPhone]);
+  }, [customers, cleanPhone, urlAmt, urlName, urlPhone]);
 
   // Generate UPI QR Code Data URL
   useEffect(() => {
-    if (customer && upiId && customer.remainingDue > 0) {
+    if (customer && upiId && (customer.remainingDue > 0 || parseFloat(customAmount) > 0)) {
       const amountToPay = parseFloat(customAmount) || customer.remainingDue;
       generateUpiQrDataUrl(
         upiId,
@@ -102,13 +129,28 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
   };
 
   const handlePayViaUpiApp = () => {
-    if (!upiId) {
+    if (!upiId || !upiId.trim()) {
       alert('Merchant UPI ID is not configured. Please contact the store.');
       return;
     }
     const amt = parseFloat(customAmount) || (customer?.remainingDue || 0);
+    if (isNaN(amt) || amt <= 0) {
+      alert('Please enter a valid payment amount greater than ₹0.');
+      return;
+    }
+
     const upiDeepLink = buildUpiPayUrl(upiId, storeName, amt, `Due Payment - ${customer?.name || 'Customer'}`);
-    window.location.href = upiDeepLink;
+    
+    setHasAttemptedUpiPay(true);
+
+    try {
+      const a = document.createElement('a');
+      a.href = upiDeepLink;
+      a.rel = 'noreferrer';
+      a.click();
+    } catch (_e) {
+      window.location.href = upiDeepLink;
+    }
   };
 
   const handleSubmitProof = async (e: React.FormEvent) => {
@@ -135,7 +177,7 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
     try {
       const claim: PaymentClaim = {
         id: `claim-cust-${Date.now()}`,
-        tenantId: currentTenant?.id || settings?.tenantId || 'default_tenant',
+        tenantId: currentTenant?.id || settings?.tenantId || urlParams.get('tenant') || 'default_tenant',
         customerId: customer?.id || 'guest',
         customerName: customer?.name || 'Customer',
         customerPhone: cleanPhone || customer?.phone || phoneParam,
@@ -145,7 +187,7 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
         status: 'PENDING',
       };
 
-      await saveClaimToFirestore(claim, currentTenant?.id || 'default_tenant');
+      await saveClaimToFirestore(claim, currentTenant?.id || urlParams.get('tenant') || 'default_tenant');
       if (onPaymentSubmitted) {
         onPaymentSubmitted(claim);
       }
@@ -188,7 +230,7 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-2xl font-extrabold text-white">Payment Received & Submitted!</h2>
+              <h2 className="text-2xl font-extrabold text-white">Payment Proof Submitted!</h2>
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
                 Your payment confirmation has been securely sent to <strong className="text-slate-200">{storeName}</strong>.
               </p>
@@ -210,8 +252,8 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
               <div className="flex justify-between pt-1 text-[11px]">
                 <span className="text-slate-400">Status:</span>
                 <span className="text-amber-400 font-bold flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 fill-current" />
-                  Submitted for Verification
+                  <Clock className="w-3.5 h-3.5 fill-current text-amber-400" />
+                  Payment Verification Pending
                 </span>
               </div>
             </div>
@@ -270,6 +312,19 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
               </div>
             </div>
 
+            {/* Verification Pending Banner if Pay clicked */}
+            {hasAttemptedUpiPay && (
+              <div className="p-4 bg-amber-950/70 border border-amber-600/70 rounded-2xl space-y-2 text-xs animate-fade-in shadow-lg">
+                <div className="flex items-center gap-2 text-amber-300 font-extrabold text-sm">
+                  <Clock className="w-4 h-4 text-amber-400 animate-spin flex-shrink-0" />
+                  <span>Payment Verification Pending</span>
+                </div>
+                <p className="text-amber-200/90 leading-relaxed">
+                  UPI Payment for <strong className="text-white">{currencySymbol}{payAmt.toLocaleString('en-IN')}</strong> was launched. Once completed in your UPI app, please enter your 12-digit Transaction ID / UTR number below to confirm your payment with <strong className="text-white">{storeName}</strong>.
+                </p>
+              </div>
+            )}
+
             {/* UPI Payment Methods */}
             {upiId ? (
               <div className="space-y-4">
@@ -288,7 +343,7 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
 
                   <button
                     onClick={handlePayViaUpiApp}
-                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all"
+                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <span>Pay {currencySymbol}{payAmt.toLocaleString('en-IN')} via UPI App</span>
                     <ExternalLink className="w-4 h-4" />
@@ -316,7 +371,7 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
                     <span className="text-xs text-slate-400 font-mono">UPI ID: <strong className="text-slate-200">{upiId}</strong></span>
                     <button
                       onClick={handleCopyUpi}
-                      className="p-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition-all"
+                      className="p-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition-all cursor-pointer"
                       title="Copy UPI ID"
                     >
                       {copiedUpi ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
@@ -386,7 +441,7 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all"
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 {isSubmitting ? (
                   <span>Submitting Payment Proof...</span>
@@ -411,3 +466,4 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
     </div>
   );
 };
+
