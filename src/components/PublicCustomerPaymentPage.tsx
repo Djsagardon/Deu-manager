@@ -115,16 +115,13 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
       const mc = urlMc || '5411';
       const customerDisplayName = customer?.name && customer.name !== 'Valued Customer' ? customer.name : (urlName || 'Customer');
       const paymentNote = urlNote || `${customerDisplayName} - Due Payment`;
-      const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
       generateUpiQrDataUrl(
         upiId,
         storeName,
         amountToPay,
         paymentNote,
-        mc,
-        undefined,
-        currentUrl
+        mc
       ).then((url) => {
         setQrCodeDataUrl(url);
       });
@@ -152,16 +149,13 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
     const mc = urlMc || '5411';
     const customerDisplayName = customer?.name && customer.name !== 'Valued Customer' ? customer.name : (urlName || 'Customer');
     const paymentNote = urlNote || `${customerDisplayName} - Due Payment`;
-    const currentPaymentPageUrl = typeof window !== 'undefined' ? window.location.href : '';
 
     const upiDeepLink = buildUpiPayUrl(
       upiId,
       storeName,
       amt,
       paymentNote,
-      mc,
-      undefined,
-      currentPaymentPageUrl
+      mc
     );
     
     setHasAttemptedUpiPay(true);

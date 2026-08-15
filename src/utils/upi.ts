@@ -23,6 +23,34 @@ export function generateTransactionReference(prefix: string = 'DM'): string {
   return generateUniqueTransactionId(0, prefix);
 }
 
+export function getShortTransactionReferenceUrl(customUrl?: string): string {
+  if (customUrl && typeof customUrl === 'string' && customUrl.startsWith('http')) {
+    try {
+      const parsed = new URL(customUrl);
+      const clean = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '') + '/';
+      if (clean.length <= 55) return clean;
+    } catch (_e) {
+      // ignore
+    }
+  }
+  if (typeof window !== 'undefined' && window.location) {
+    try {
+      const origin = window.location.origin;
+      const pathname = window.location.pathname;
+      if (origin.includes('djsagardon.github.io') || pathname.includes('Deu-manager')) {
+        return 'https://djsagardon.github.io/Deu-manager/';
+      }
+      const cleanBase = `${origin}${pathname}`.replace(/\/+$/, '') + '/';
+      if (cleanBase.length <= 55 && cleanBase.startsWith('http')) {
+        return cleanBase;
+      }
+    } catch (_e) {
+      // fallback
+    }
+  }
+  return 'https://djsagardon.github.io/Deu-manager/';
+}
+
 export function buildUpiPayUrl(
   upiId: string,
   adminName: string,
@@ -30,7 +58,7 @@ export function buildUpiPayUrl(
   note: string = 'Due Payment',
   merchantCategoryCode: string = '5411',
   transactionRef?: string,
-  currentUrl?: string
+  referenceUrl?: string
 ): string {
   const cleanUpi = upiId ? upiId.trim().replace(/\s+/g, '') : '';
   const cleanName = (adminName || 'Due Manager').trim();
@@ -38,8 +66,14 @@ export function buildUpiPayUrl(
   const numericAmount = parseFloat(String(amount));
   const formattedAmount = (!isNaN(numericAmount) && numericAmount > 0) ? numericAmount.toFixed(2) : '0.00';
   const tr = (transactionRef || generateUniqueTransactionId(formattedAmount, 'DUE')).trim();
-  const cleanNote = (note || 'Due Payment').trim();
-  const cleanUrl = (currentUrl || (typeof window !== 'undefined' ? window.location.href : '')).trim();
+  
+  // Keep payment note concise and clean (NPCI recommended max 40 chars)
+  let cleanNote = (note || 'Due Payment').trim().replace(/[\r\n\t]+/g, ' ');
+  if (cleanNote.length > 40) {
+    cleanNote = cleanNote.substring(0, 40).trim();
+  }
+
+  const shortRefUrl = getShortTransactionReferenceUrl(referenceUrl);
 
   const encodedPa = encodeURIComponent(cleanUpi);
   const encodedPn = encodeURIComponent(cleanName);
@@ -48,14 +82,9 @@ export function buildUpiPayUrl(
   const encodedTn = encodeURIComponent(cleanNote);
   const encodedAm = formattedAmount;
   const encodedCu = 'INR';
-  const encodedUrl = cleanUrl ? encodeURIComponent(cleanUrl) : '';
+  const encodedUrl = encodeURIComponent(shortRefUrl);
 
-  let upiUri = `upi://pay?pa=${encodedPa}&pn=${encodedPn}&mc=${encodedMc}&tr=${encodedTr}&tn=${encodedTn}&am=${encodedAm}&cu=${encodedCu}`;
-  if (encodedUrl) {
-    upiUri += `&url=${encodedUrl}`;
-  }
-
-  return upiUri;
+  return `upi://pay?pa=${encodedPa}&pn=${encodedPn}&mc=${encodedMc}&tr=${encodedTr}&tn=${encodedTn}&am=${encodedAm}&cu=${encodedCu}&url=${encodedUrl}`;
 }
 
 export async function generateUpiQrDataUrl(
