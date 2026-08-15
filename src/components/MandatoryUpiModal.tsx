@@ -6,7 +6,7 @@ interface MandatoryUpiModalProps {
   isOpen: boolean;
   currentTenant: TenantWorkspace | null;
   settings: AppSettings;
-  onSaveUpiId: (upiId: string) => Promise<void>;
+  onSaveUpiId: (upiId: string, merchantName?: string) => Promise<void>;
 }
 
 export const MandatoryUpiModal: React.FC<MandatoryUpiModalProps> = ({
@@ -15,7 +15,9 @@ export const MandatoryUpiModal: React.FC<MandatoryUpiModalProps> = ({
   settings,
   onSaveUpiId,
 }) => {
+  const initialName = currentTenant?.merchantName || settings?.merchantName || currentTenant?.companyName || settings?.appName || currentTenant?.ownerName || settings?.adminName || '';
   const [upiInput, setUpiInput] = useState(currentTenant?.upiId || settings?.upiId || '');
+  const [merchantNameInput, setMerchantNameInput] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [verifiedSuccess, setVerifiedSuccess] = useState(false);
@@ -32,6 +34,7 @@ export const MandatoryUpiModal: React.FC<MandatoryUpiModalProps> = ({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUpi = upiInput.trim();
+    const cleanMerchantName = merchantNameInput.trim();
 
     if (!cleanUpi) {
       setErrorMsg('Please enter your UPI VPA ID (e.g. store@upi).');
@@ -43,11 +46,16 @@ export const MandatoryUpiModal: React.FC<MandatoryUpiModalProps> = ({
       return;
     }
 
+    if (!cleanMerchantName) {
+      setErrorMsg('Please enter the Merchant / Payee Name associated with this UPI ID.');
+      return;
+    }
+
     setErrorMsg('');
     setIsSaving(true);
 
     try {
-      await onSaveUpiId(cleanUpi);
+      await onSaveUpiId(cleanUpi, cleanMerchantName);
       setVerifiedSuccess(true);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to save UPI ID. Please try again.');
@@ -96,7 +104,27 @@ export const MandatoryUpiModal: React.FC<MandatoryUpiModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSave} className="space-y-5">
+        <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-2">
+              Merchant / Payee Name (As Registered with UPI) *
+            </label>
+            <input
+              type="text"
+              required
+              value={merchantNameInput}
+              onChange={(e) => {
+                setMerchantNameInput(e.target.value);
+                setErrorMsg('');
+              }}
+              placeholder="e.g. Sagar Traders, Ramesh Kumar"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-base font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            />
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+              This exact name will be sent in UPI payment requests as Payee Name (pn).
+            </p>
+          </div>
+
           <div>
             <label className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider mb-2">
               Store / Business UPI ID (VPA) *

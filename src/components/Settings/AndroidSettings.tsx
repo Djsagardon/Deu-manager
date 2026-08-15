@@ -77,6 +77,7 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
   // Company Profile & UPI Form states
   const [ownerName, setOwnerName] = useState(userProfile?.name || currentTenant?.ownerName || '');
   const [companyName, setCompanyName] = useState(currentTenant?.companyName || settings.appName || '');
+  const [merchantName, setMerchantName] = useState(currentTenant?.merchantName || settings.merchantName || currentTenant?.companyName || userProfile?.name || currentTenant?.ownerName || '');
   const [phone, setPhone] = useState(userProfile?.phone || currentTenant?.phone || '');
   const [businessType, setBusinessType] = useState(currentTenant?.businessType || 'Retail Store');
   const [address, setAddress] = useState(currentTenant?.address || '');
@@ -128,6 +129,7 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
     const updatedTenantData: Partial<TenantWorkspace> = {
       companyName,
       ownerName,
+      merchantName,
       phone,
       businessType,
       address,
@@ -141,6 +143,7 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
     onUpdateSettings({
       ...settings,
       adminName: ownerName,
+      merchantName: merchantName || ownerName || companyName,
       adminPhone: phone,
       appName: companyName,
       upiId: effectiveUpiId,
@@ -710,18 +713,40 @@ export const AndroidSettings: React.FC<AndroidSettingsProps> = ({
               </label>
 
               {!usePlatformUpi && (
-                <div className="ml-6 mt-1">
-                  <input
-                    type="text"
-                    required={!usePlatformUpi}
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                    placeholder="e.g. mystore@oksbi"
-                    className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl font-mono font-bold text-slate-900 dark:text-white"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Payments will land directly in your own UPI bank account.
-                  </p>
+                <div className="ml-6 mt-1 space-y-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Merchant / Payee Name (pn) *
+                    </label>
+                    <input
+                      type="text"
+                      required={!usePlatformUpi}
+                      value={merchantName}
+                      onChange={(e) => setMerchantName(e.target.value)}
+                      placeholder="e.g. Sagar Traders / Store Owner"
+                      className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl font-bold text-slate-900 dark:text-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Exact Merchant/Payee Name registered with your UPI account (sent as pn).
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Store UPI ID (VPA) *
+                    </label>
+                    <input
+                      type="text"
+                      required={!usePlatformUpi}
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      placeholder="e.g. mystore@oksbi"
+                      className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl font-mono font-bold text-slate-900 dark:text-white"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Payments will land directly in your own UPI bank account.
+                    </p>
+                  </div>
                 </div>
               )}
 

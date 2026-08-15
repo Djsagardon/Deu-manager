@@ -495,8 +495,13 @@ export default function App() {
     }
   }, [userProfile, currentTenant?.upiId, settings.upiId]);
 
-  const handleSaveMandatoryUpi = async (newUpiId: string) => {
-    const updatedSettings = { ...settings, upiId: newUpiId };
+  const handleSaveMandatoryUpi = async (newUpiId: string, newMerchantName?: string) => {
+    const updatedSettings: AppSettings = {
+      ...settings,
+      upiId: newUpiId,
+      merchantName: newMerchantName || settings.merchantName || settings.adminName || 'Merchant Store',
+      adminName: newMerchantName || settings.adminName,
+    };
     setSettings(updatedSettings);
     saveStoredSettings(updatedSettings);
     if (isOnline) {
@@ -504,7 +509,11 @@ export default function App() {
     }
 
     if (currentTenant) {
-      const updatedTenant = { ...currentTenant, upiId: newUpiId };
+      const updatedTenant: TenantWorkspace = {
+        ...currentTenant,
+        upiId: newUpiId,
+        merchantName: newMerchantName || currentTenant.merchantName || currentTenant.companyName || currentTenant.ownerName,
+      };
       setCurrentTenant(updatedTenant);
       saveAuthSession(userProfile!, updatedTenant);
       if (isOnline) {
@@ -513,7 +522,7 @@ export default function App() {
     }
 
     setIsMandatoryUpiOpen(false);
-    showToast('✅ Mandatory Store UPI ID saved and verified!');
+    showToast('✅ Store UPI ID and Merchant Name saved!');
   };
 
   const handleMarkNotificationAsRead = async (id: string) => {

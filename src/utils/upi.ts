@@ -53,7 +53,7 @@ export function getShortTransactionReferenceUrl(customUrl?: string): string {
 
 export function buildUpiPayUrl(
   upiId: string,
-  adminName: string,
+  merchantPayeeName: string,
   amount: number | string,
   note: string = 'Due Payment',
   merchantCategoryCode: string = '5411',
@@ -61,7 +61,7 @@ export function buildUpiPayUrl(
   referenceUrl?: string
 ): string {
   const cleanUpi = upiId ? upiId.trim().replace(/\s+/g, '') : '';
-  const cleanName = (adminName || 'Due Manager').trim();
+  const cleanName = (merchantPayeeName || 'Merchant Store').trim();
   const mc = (merchantCategoryCode || '5411').trim();
   const numericAmount = parseFloat(String(amount));
   const formattedAmount = (!isNaN(numericAmount) && numericAmount > 0) ? numericAmount.toFixed(2) : '0.00';
@@ -73,8 +73,6 @@ export function buildUpiPayUrl(
     cleanNote = cleanNote.substring(0, 40).trim();
   }
 
-  const shortRefUrl = getShortTransactionReferenceUrl(referenceUrl);
-
   const encodedPa = encodeURIComponent(cleanUpi);
   const encodedPn = encodeURIComponent(cleanName);
   const encodedMc = encodeURIComponent(mc);
@@ -82,9 +80,15 @@ export function buildUpiPayUrl(
   const encodedTn = encodeURIComponent(cleanNote);
   const encodedAm = formattedAmount;
   const encodedCu = 'INR';
-  const encodedUrl = encodeURIComponent(shortRefUrl);
 
-  return `upi://pay?pa=${encodedPa}&pn=${encodedPn}&mc=${encodedMc}&tr=${encodedTr}&tn=${encodedTn}&am=${encodedAm}&cu=${encodedCu}&url=${encodedUrl}`;
+  let baseUpi = `upi://pay?pa=${encodedPa}&pn=${encodedPn}&mc=${encodedMc}&tr=${encodedTr}&tn=${encodedTn}&am=${encodedAm}&cu=${encodedCu}`;
+
+  // Only include optional url parameter if a valid short HTTPS reference URL is explicitly provided (<= 50 chars)
+  if (referenceUrl && typeof referenceUrl === 'string' && referenceUrl.startsWith('https://') && referenceUrl.length <= 50) {
+    baseUpi += `&url=${encodeURIComponent(referenceUrl)}`;
+  }
+
+  return baseUpi;
 }
 
 export async function generateUpiQrDataUrl(
@@ -253,13 +257,10 @@ export function formatWhatsAppReminderText(
   const cleanPhone = formatPhoneNumberForWhatsApp(customer.phone);
   const baseUrl = paymentPortalUrl || (typeof window !== 'undefined' ? (window.location.origin + window.location.pathname) : '');
 
-  // Clean Store / Company Name - Remove any email domains or usernames
-  let storeName = companyNameOverride || settings?.appName || settings?.adminName || 'Mondal Traders';
+  // Clean Store / Merchant Name
+  let storeName = companyNameOverride || settings?.merchantName || settings?.adminName || settings?.appName || 'Store';
   if (storeName.includes('@')) {
     storeName = storeName.split('@')[0];
-  }
-  if (!storeName || storeName.toLowerCase() === 'due manager' || (/^[a-z0-9._]+$/i.test(storeName) && storeName.includes('16461'))) {
-    storeName = companyNameOverride || 'Mondal Traders';
   }
 
   const currency = settings?.currency || '₹';
@@ -362,7 +363,7 @@ export async function sendWhatsAppReminderWithQr(
   onNotify?: (msg: string) => void
 ) {
   const amount = customer.remainingDue;
-  const storeName = settings.adminName || 'Due Manager';
+  const storeName = settings.merchantName || settings.adminName || settings.appName || 'Merchant';
   const upiId = settings.upiId || '';
   const currency = settings.currency || '₹';
 

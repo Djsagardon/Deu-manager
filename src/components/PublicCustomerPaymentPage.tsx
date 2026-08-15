@@ -66,14 +66,21 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
   const currencySymbol = settings?.currency || currentTenant?.currency || '₹';
   const upiId = urlUpi || settings?.upiId || currentTenant?.upiId || '';
 
-  // Determine Store Name cleanly without email addresses
-  let storeName = urlStore || currentTenant?.companyName || settings?.appName || settings?.adminName || 'Mondal Traders';
-  if (storeName.includes('@')) {
-    storeName = storeName.split('@')[0];
+  // Determine Saved Merchant / Payee Name (pn)
+  let merchantPayeeName = (
+    urlStore ||
+    currentTenant?.merchantName ||
+    settings?.merchantName ||
+    currentTenant?.companyName ||
+    settings?.appName ||
+    currentTenant?.ownerName ||
+    settings?.adminName ||
+    'Merchant Store'
+  ).trim();
+  if (merchantPayeeName.includes('@')) {
+    merchantPayeeName = merchantPayeeName.split('@')[0];
   }
-  if (!storeName || storeName.toLowerCase() === 'due manager') {
-    storeName = 'Mondal Traders';
-  }
+  const storeName = merchantPayeeName;
 
   useEffect(() => {
     setLoading(true);

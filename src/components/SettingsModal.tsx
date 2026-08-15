@@ -63,10 +63,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <QrCode className="w-4 h-4" />
               1. UPI & Payment Settings
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  8. Your UPI ID (VPA) *
+                  8. Merchant / Payee Name (pn) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.merchantName || formData.adminName || ''}
+                  onChange={(e) => handleChange('merchantName', e.target.value)}
+                  placeholder="e.g. Sagar Enterprise"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  9. Your UPI ID (VPA) *
                 </label>
                 <input
                   type="text"
@@ -80,7 +94,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  9. Preferred UPI App
+                  10. Preferred UPI App
                 </label>
                 <select
                   value={formData.preferredUpiApp}

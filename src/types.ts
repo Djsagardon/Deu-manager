@@ -51,6 +51,7 @@ export interface TenantWorkspace {
   id: string;
   companyName: string;
   ownerName: string;
+  merchantName?: string;
   ownerEmail: string;
   phone: string;
   planId: string;
@@ -166,6 +167,7 @@ export interface AppSettings {
   
   // UPI & Payments
   upiId: string;
+  merchantName?: string;
   preferredUpiApp: 'Any' | 'PhonePe' | 'Google Pay' | 'Paytm' | 'BHIM';
   
   // Business / Admin

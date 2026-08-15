@@ -25,7 +25,7 @@ export const WhatsAppReminderModal: React.FC<WhatsAppReminderModalProps> = ({
   onNotify,
 }) => {
   const currencySymbol = settings?.currency || '₹';
-  const storeName = settings?.adminName || 'Due Manager';
+  const storeName = settings?.merchantName || settings?.adminName || settings?.appName || 'Merchant Store';
   const upiId = settings?.upiId || '';
 
   const [message, setMessage] = useState('');

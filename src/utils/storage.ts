@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
   // UPI & Payment
   upiId: '',
+  merchantName: 'Sagar Enterprise',
   preferredUpiApp: 'PhonePe',
 
   // Business & Admin

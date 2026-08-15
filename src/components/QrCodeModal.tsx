@@ -18,7 +18,7 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
 }) => {
   const currencySymbol = settings?.currency || '₹';
   const upiId = settings?.upiId || 'merchant@upi';
-  const adminName = settings?.adminName || 'Due Manager';
+  const merchantPayeeName = settings?.merchantName || settings?.adminName || settings?.appName || 'Merchant Store';
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -28,18 +28,18 @@ export const QrCodeModal: React.FC<QrCodeModalProps> = ({
       const amount = customer.remainingDue > 0 ? customer.remainingDue : 100;
       generateUpiQrDataUrl(
         upiId,
-        adminName,
+        merchantPayeeName,
         amount,
         `Pending Due - ${customer.name}`
       ).then((url) => setQrDataUrl(url));
     }
-  }, [isOpen, customer, upiId, adminName]);
+  }, [isOpen, customer, upiId, merchantPayeeName]);
 
   if (!isOpen || !customer) return null;
 
   const upiPayUrl = buildUpiPayUrl(
     upiId,
-    adminName,
+    merchantPayeeName,
     customer.remainingDue,
     `Pending Due - ${customer.name}`
   );
