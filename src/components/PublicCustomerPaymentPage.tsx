@@ -55,10 +55,12 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
   // Parse URL search parameters for WhatsApp guest visitors
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const urlPhone = urlParams.get('phone') || urlParams.get('customerPhone') || phoneParam || '';
-  const urlAmt = urlParams.get('amt') || urlParams.get('amount') || '';
+  const urlAmt = urlParams.get('amt') || urlParams.get('am') || urlParams.get('amount') || '';
   const urlName = urlParams.get('name') || urlParams.get('customerName') || '';
-  const urlStore = urlParams.get('store') || urlParams.get('storeName') || '';
-  const urlUpi = urlParams.get('upi') || '';
+  const urlStore = urlParams.get('store') || urlParams.get('storeName') || urlParams.get('pn') || '';
+  const urlUpi = urlParams.get('upi') || urlParams.get('pa') || '';
+  const urlMc = urlParams.get('mc') || urlParams.get('mcc') || '';
+  const urlNote = urlParams.get('note') || urlParams.get('tn') || '';
 
   const cleanPhone = formatPhoneNumberForWhatsApp(urlPhone || phoneParam);
   const currencySymbol = settings?.currency || currentTenant?.currency || '₹';
@@ -108,12 +110,12 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
 
   // Generate UPI QR Code Data URL
   useEffect(() => {
-    if (customer && upiId && (customer.remainingDue > 0 || parseFloat(customAmount) > 0)) {
-      const amountToPay = parseFloat(customAmount) || customer.remainingDue;
-      const mc = urlParams.get('mc') || urlParams.get('mcc') || '5411';
+    if (customer && upiId && (customer.remainingDue > 0 || parseFloat(customAmount) > 0 || (urlAmt && parseFloat(urlAmt) > 0))) {
+      const amountToPay = parseFloat(customAmount) || customer.remainingDue || (urlAmt ? parseFloat(urlAmt) : 0);
+      const mc = urlMc || '5411';
       const customerDisplayName = customer?.name && customer.name !== 'Valued Customer' ? customer.name : (urlName || 'Customer');
-      const paymentNote = urlParams.get('note') || urlParams.get('tn') || `Due Payment - ${customerDisplayName}`;
-      const txRef = generateTransactionReference('DM');
+      const paymentNote = urlNote || `${customerDisplayName} - Due Payment`;
+      const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
       generateUpiQrDataUrl(
         upiId,
@@ -121,12 +123,13 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
         amountToPay,
         paymentNote,
         mc,
-        txRef
+        undefined,
+        currentUrl
       ).then((url) => {
         setQrCodeDataUrl(url);
       });
     }
-  }, [customer, upiId, storeName, customAmount, urlAmt, urlName]);
+  }, [customer, upiId, storeName, customAmount, urlAmt, urlName, urlMc, urlNote]);
 
   const handleCopyUpi = () => {
     if (!upiId) return;
@@ -140,16 +143,16 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
       alert('Merchant UPI ID is not configured. Please contact the store.');
       return;
     }
-    const amt = parseFloat(customAmount) || (customer?.remainingDue || 0);
+    const amt = parseFloat(customAmount) || (customer?.remainingDue || (urlAmt ? parseFloat(urlAmt) : 0));
     if (isNaN(amt) || amt <= 0) {
       alert('Please enter a valid payment amount greater than ₹0.');
       return;
     }
 
-    const mc = urlParams.get('mc') || urlParams.get('mcc') || '5411';
+    const mc = urlMc || '5411';
     const customerDisplayName = customer?.name && customer.name !== 'Valued Customer' ? customer.name : (urlName || 'Customer');
-    const paymentNote = urlParams.get('note') || urlParams.get('tn') || `Due Payment - ${customerDisplayName}`;
-    const txRef = generateTransactionReference('DM');
+    const paymentNote = urlNote || `${customerDisplayName} - Due Payment`;
+    const currentPaymentPageUrl = typeof window !== 'undefined' ? window.location.href : '';
 
     const upiDeepLink = buildUpiPayUrl(
       upiId,
@@ -157,7 +160,8 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
       amt,
       paymentNote,
       mc,
-      txRef
+      undefined,
+      currentPaymentPageUrl
     );
     
     setHasAttemptedUpiPay(true);
