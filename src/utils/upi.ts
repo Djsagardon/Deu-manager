@@ -1,28 +1,48 @@
 import QRCode from 'qrcode';
 import { AppSettings, Customer } from '../types';
 
+export function generateTransactionReference(prefix: string = 'DM'): string {
+  const timestamp = Date.now().toString();
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
+  return `${prefix}${timestamp}${randomSuffix}`;
+}
+
 export function buildUpiPayUrl(
   upiId: string,
   adminName: string,
   amount: number,
-  note: string
+  note: string = 'Pending Due Payment',
+  merchantCategoryCode: string = '5411',
+  transactionRef?: string
 ): string {
   const cleanUpi = upiId ? upiId.trim().replace(/\s+/g, '') : '';
-  const encodedName = encodeURIComponent(adminName || 'Due Manager');
-  const encodedNote = encodeURIComponent(note || 'Pending Due Payment');
+  const cleanName = (adminName || 'Due Manager').trim();
+  const mc = (merchantCategoryCode || '5411').trim();
+  const tr = (transactionRef || generateTransactionReference()).trim();
   const numericAmount = parseFloat(String(amount));
   const formattedAmount = (!isNaN(numericAmount) && numericAmount > 0) ? numericAmount.toFixed(2) : '0.00';
+  const cleanNote = (note || 'Pending Due Payment').trim();
 
-  return `upi://pay?pa=${cleanUpi}&pn=${encodedName}&am=${formattedAmount}&cu=INR&tn=${encodedNote}`;
+  const encodedPa = encodeURIComponent(cleanUpi);
+  const encodedPn = encodeURIComponent(cleanName);
+  const encodedMc = encodeURIComponent(mc);
+  const encodedTr = encodeURIComponent(tr);
+  const encodedAm = formattedAmount;
+  const encodedCu = 'INR';
+  const encodedTn = encodeURIComponent(cleanNote);
+
+  return `upi://pay?pa=${encodedPa}&pn=${encodedPn}&mc=${encodedMc}&tr=${encodedTr}&am=${encodedAm}&cu=${encodedCu}&tn=${encodedTn}`;
 }
 
 export async function generateUpiQrDataUrl(
   upiId: string,
   adminName: string,
   amount: number,
-  note: string
+  note: string = 'Pending Due Payment',
+  merchantCategoryCode: string = '5411',
+  transactionRef?: string
 ): Promise<string> {
-  const upiUrl = buildUpiPayUrl(upiId, adminName, amount, note);
+  const upiUrl = buildUpiPayUrl(upiId, adminName, amount, note, merchantCategoryCode, transactionRef);
   try {
     const dataUrl = await QRCode.toDataURL(upiUrl, {
       width: 320,

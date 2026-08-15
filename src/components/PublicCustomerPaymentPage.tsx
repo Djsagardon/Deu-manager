@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomerSummary, AppSettings, TenantWorkspace, PaymentClaim } from '../types';
-import { generateUpiQrDataUrl, buildUpiPayUrl, formatPhoneNumberForWhatsApp } from '../utils/upi';
+import { generateUpiQrDataUrl, buildUpiPayUrl, formatPhoneNumberForWhatsApp, generateTransactionReference } from '../utils/upi';
 import { saveClaimToFirestore } from '../utils/firebase';
 
 interface PublicCustomerPaymentPageProps {
@@ -110,16 +110,23 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
   useEffect(() => {
     if (customer && upiId && (customer.remainingDue > 0 || parseFloat(customAmount) > 0)) {
       const amountToPay = parseFloat(customAmount) || customer.remainingDue;
+      const mc = urlParams.get('mc') || urlParams.get('mcc') || '5411';
+      const customerDisplayName = customer?.name && customer.name !== 'Valued Customer' ? customer.name : (urlName || 'Customer');
+      const paymentNote = urlParams.get('note') || urlParams.get('tn') || `Due Payment - ${customerDisplayName}`;
+      const txRef = generateTransactionReference('DM');
+
       generateUpiQrDataUrl(
         upiId,
         storeName,
         amountToPay,
-        `Due Payment - ${customer.name}`
+        paymentNote,
+        mc,
+        txRef
       ).then((url) => {
         setQrCodeDataUrl(url);
       });
     }
-  }, [customer, upiId, storeName, customAmount]);
+  }, [customer, upiId, storeName, customAmount, urlAmt, urlName]);
 
   const handleCopyUpi = () => {
     if (!upiId) return;
@@ -139,7 +146,19 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
       return;
     }
 
-    const upiDeepLink = buildUpiPayUrl(upiId, storeName, amt, `Due Payment - ${customer?.name || 'Customer'}`);
+    const mc = urlParams.get('mc') || urlParams.get('mcc') || '5411';
+    const customerDisplayName = customer?.name && customer.name !== 'Valued Customer' ? customer.name : (urlName || 'Customer');
+    const paymentNote = urlParams.get('note') || urlParams.get('tn') || `Due Payment - ${customerDisplayName}`;
+    const txRef = generateTransactionReference('DM');
+
+    const upiDeepLink = buildUpiPayUrl(
+      upiId,
+      storeName,
+      amt,
+      paymentNote,
+      mc,
+      txRef
+    );
     
     setHasAttemptedUpiPay(true);
 
@@ -147,7 +166,9 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
       const a = document.createElement('a');
       a.href = upiDeepLink;
       a.rel = 'noreferrer';
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
     } catch (_e) {
       window.location.href = upiDeepLink;
     }
