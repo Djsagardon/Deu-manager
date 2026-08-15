@@ -273,7 +273,16 @@ export default function App() {
   const [isPublicPaymentView] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
-    return params.get('mode') === 'pay' || params.has('customerPhone') || params.has('phone');
+    return (
+      params.get('mode') === 'pay' ||
+      params.has('customerPhone') ||
+      params.has('phone') ||
+      params.has('amt') ||
+      params.has('am') ||
+      params.has('amount') ||
+      params.has('upi') ||
+      params.has('pa')
+    );
   });
   const [publicPaymentPhone] = useState<string>(() => {
     if (typeof window === 'undefined') return '';

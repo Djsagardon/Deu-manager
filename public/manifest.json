@@ -1,9 +1,9 @@
 {
   "short_name": "Due Manager",
   "name": "Due Manager - Smart Business Ledger",
-  "id": "/Deu-manager/",
-  "start_url": "/Deu-manager/",
-  "scope": "/Deu-manager/",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "icons": [
     {
       "src": "logo.svg",
