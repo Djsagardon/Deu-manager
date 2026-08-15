@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CustomerSummary, AppSettings, TenantWorkspace, PaymentClaim } from '../types';
-import { generateUpiQrDataUrl, buildUpiPayUrl, formatPhoneNumberForWhatsApp, generateTransactionReference } from '../utils/upi';
+import { generateUpiQrDataUrl, buildUpiPayUrl, formatPhoneNumberForWhatsApp, generateTransactionReference, generateUniqueTransactionId } from '../utils/upi';
 import { saveClaimToFirestore } from '../utils/firebase';
 
 interface PublicCustomerPaymentPageProps {
@@ -143,30 +143,41 @@ export const PublicCustomerPaymentPage: React.FC<PublicCustomerPaymentPageProps>
   };
 
   const handlePayViaUpiApp = () => {
-    if (!upiId || !upiId.trim()) {
+    // 1. Read dynamically saved Merchant UPI ID
+    const targetUpiId = (upiId || urlUpi || currentTenant?.upiId || settings?.upiId || '').trim();
+    if (!targetUpiId) {
       alert('Merchant UPI ID is not configured. Please contact the store.');
       return;
     }
+
+    // 2. Read exact dynamic pending amount
     const amt = parseFloat(customAmount) || (customer?.remainingDue || (urlAmt ? parseFloat(urlAmt) : 0));
     if (isNaN(amt) || amt <= 0) {
       alert('Please enter a valid payment amount greater than ₹0.');
       return;
     }
 
+    // 3. Generate newly created unique transaction ID for this attempt
+    const tr = generateUniqueTransactionId(amt, 'DUE');
+
+    // 4. Determine short payment note and merchant name
     const mc = urlMc || '5411';
     const customerDisplayName = customer?.name && customer.name !== 'Valued Customer' ? customer.name : (urlName || 'Customer');
     const paymentNote = urlNote || `${customerDisplayName} - Due Payment`;
 
+    // 5. Build dynamic standard UPI deep link (pa = saved UPI ID only)
     const upiDeepLink = buildUpiPayUrl(
-      upiId,
+      targetUpiId,
       storeName,
       amt,
       paymentNote,
-      mc
+      mc,
+      tr
     );
     
     setHasAttemptedUpiPay(true);
 
+    // 6. Launch UPI Android intent to trigger installed payment apps
     try {
       const a = document.createElement('a');
       a.href = upiDeepLink;
